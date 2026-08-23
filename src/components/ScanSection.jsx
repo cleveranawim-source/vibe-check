@@ -11,13 +11,24 @@ function FindingCard({ finding }) {
   const { rule, occurrences } = finding
   const sev = SEVERITIES[rule.severity]
 
+  // 복사 시 발견 위치(파일·줄·스니펫)를 프롬프트에 함께 담는다 — 비밀키는 이미 마스킹된 스니펫
+  const buildPrompt = () => {
+    const locs = occurrences
+      .slice(0, 5)
+      .map((o) => `- ${o.file} ${o.line}번째 줄: ${o.snippet}`)
+      .join('\n')
+    const more = occurrences.length > 5 ? `\n- …외 ${occurrences.length - 5}곳` : ''
+    return `${rule.aiPrompt}\n\n[자동 검사(바이브체크)로 발견된 위치]\n${locs}${more}`
+  }
+
   const copyPrompt = async () => {
+    const text = buildPrompt()
     try {
-      await navigator.clipboard.writeText(rule.aiPrompt)
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 1600)
     } catch {
-      window.prompt('아래 내용을 복사하세요', rule.aiPrompt)
+      window.prompt('아래 내용을 복사하세요', text)
     }
   }
 
@@ -42,6 +53,18 @@ function FindingCard({ finding }) {
             <strong>어떻게 고치나요?</strong>
             <p>{rule.fix}</p>
           </div>
+          {rule.example && (
+            <div className="fix-example">
+              <div className="ex-row ex-bad">
+                <span className="ex-tag">❌ 이전</span>
+                <pre>{rule.example.bad}</pre>
+              </div>
+              <div className="ex-row ex-good">
+                <span className="ex-tag">✅ 이후</span>
+                <pre>{rule.example.good}</pre>
+              </div>
+            </div>
+          )}
           <div className="finding-locs">
             <strong>발견 위치</strong>
             {occurrences.slice(0, 8).map((o, i) => (
@@ -64,6 +87,7 @@ function FindingCard({ finding }) {
               </button>
             </div>
             <p>{rule.aiPrompt}</p>
+            <p className="ai-prompt-hint">복사하면 발견된 파일·줄 위치가 프롬프트에 함께 담겨요.</p>
           </div>
         </div>
       )}

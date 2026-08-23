@@ -164,6 +164,10 @@ const rules = [
     explain: 'eval()은 문자열을 코드로 실행하는 함수예요. 사용자 입력이 조금이라도 섞이면, 입력창이 해커의 코드 실행 통로가 됩니다.',
     risk: '악성 스크립트 실행(XSS)으로 다른 학생의 데이터 탈취, 화면 변조 등이 가능해져요.',
     fix: '대부분의 eval()은 JSON.parse(), 객체 조회, 함수 매핑 등으로 바꿀 수 있어요.',
+    example: {
+      bad: 'const data = eval(jsonText)',
+      good: 'const data = JSON.parse(jsonText)',
+    },
     aiPrompt: '내 코드에서 eval() 사용을 전부 찾아서, 같은 기능을 하는 안전한 코드(JSON.parse, 객체 매핑 등)로 바꿔줘.',
   },
   {
@@ -187,6 +191,10 @@ const rules = [
       'innerHTML에 변수(특히 사용자가 입력한 값)를 넣으면, 입력값에 <script>나 <img onerror=...> 같은 태그가 섞였을 때 그대로 실행돼요. 이것이 가장 흔한 XSS(교차 사이트 스크립팅) 취약점이에요.',
     risk: '학생이 이름이나 일기에 악성 태그를 넣으면, 그 화면을 보는 다른 학생·교사의 브라우저에서 코드가 실행됩니다. 방명록·게시판·발표 화면 기능이 특히 위험해요.',
     fix: '텍스트만 넣을 곳에는 textContent를 쓰세요. HTML 구조가 필요하면 createElement로 조립하거나, DOMPurify 같은 정화 라이브러리를 거치세요.',
+    example: {
+      bad: 'list.innerHTML += "<li>" + userName + "</li>";',
+      good: 'const li = document.createElement("li");\nli.textContent = userName; // 태그가 글자로만 취급돼 안전\nlist.appendChild(li);',
+    },
     aiPrompt:
       '내 코드에서 사용자 입력이 innerHTML로 들어가는 부분을 전부 찾아서 XSS에 안전하게 바꿔줘. 단순 텍스트는 textContent로, HTML이 꼭 필요한 곳은 DOMPurify를 적용해줘.',
   },
@@ -199,6 +207,10 @@ const rules = [
     explain: 'document.write()는 오래된 방식으로, 변수가 섞이면 XSS 위험이 있고 페이지 로딩도 방해해요.',
     risk: '사용자 입력이 섞일 경우 악성 코드 실행 가능.',
     fix: 'DOM API(createElement, textContent)로 바꾸세요.',
+    example: {
+      bad: 'document.write("<p>" + msg + "</p>");',
+      good: 'const p = document.createElement("p");\np.textContent = msg;\ndocument.body.appendChild(p);',
+    },
     aiPrompt: '내 코드의 document.write() 사용을 현대적인 DOM API로 바꿔줘.',
   },
   {
@@ -210,6 +222,10 @@ const rules = [
     explain: 'setTimeout("코드문자열", ...)은 eval()과 같은 방식으로 동작해요.',
     risk: '문자열에 변수가 섞이면 코드 실행 통로가 됩니다.',
     fix: '문자열 대신 함수를 전달하세요: setTimeout(() => {...}, 1000)',
+    example: {
+      bad: 'setTimeout("nextQuestion()", 1000);',
+      good: 'setTimeout(() => nextQuestion(), 1000);',
+    },
     aiPrompt: '내 코드의 setTimeout/setInterval 문자열 인자를 화살표 함수로 바꿔줘.',
   },
   {
@@ -221,6 +237,10 @@ const rules = [
     explain: 'href="javascript:..." 방식은 XSS의 통로가 되기 쉬운 오래된 패턴이에요.',
     risk: '링크 값이 동적으로 만들어지면 악성 코드가 실행될 수 있어요.',
     fix: '버튼 + 이벤트 리스너(addEventListener) 방식으로 바꾸세요.',
+    example: {
+      bad: '<a href="javascript:openMenu()">메뉴</a>',
+      good: '<button type="button" onclick="openMenu()">메뉴</button>',
+    },
     aiPrompt: '내 코드의 javascript: URL 패턴을 이벤트 리스너 방식으로 바꿔줘.',
   },
 
@@ -320,6 +340,10 @@ const rules = [
       'localStorage는 그 컴퓨터·브라우저에 계속 남는 저장소예요. 교실 공용 태블릿이나 컴퓨터실 PC에서는 다음 학생이 이전 학생의 정보를 볼 수 있어요.',
     risk: '공용 기기에서 학생 개인정보(이름, 기록)가 다른 학생에게 노출됩니다.',
     fix: '꼭 남길 필요가 없으면 sessionStorage(탭 닫으면 삭제)로 바꾸고, "내 기록 지우기" 버튼을 만들어 주세요. 활동 종료 시 자동 삭제도 좋아요.',
+    example: {
+      bad: 'localStorage.setItem("studentName", name); // 기기에 계속 남음',
+      good: 'sessionStorage.setItem("studentName", name); // 탭을 닫으면 사라짐',
+    },
     aiPrompt:
       '내 앱이 localStorage에 학생 개인정보를 저장하고 있어. 공용 기기 안전을 위해 (1) 민감한 값은 sessionStorage로 옮기고 (2) "내 기록 지우기" 버튼을 추가하고 (3) 활동 완료 시 개인정보를 자동 정리하는 코드로 바꿔줘.',
   },
@@ -367,6 +391,10 @@ const rules = [
     explain: 'https가 아닌 http 주소로 리소스를 불러오거나 데이터를 보내요. http는 암호화가 없어서 중간에서 내용을 훔쳐보거나 바꿀 수 있어요.',
     risk: '같은 와이파이에 있는 사람이 전송 내용을 볼 수 있고, 브라우저가 리소스를 차단해 앱이 깨질 수도 있어요(혼합 콘텐츠).',
     fix: '주소를 https://로 바꾸세요. https를 지원하지 않는 서비스라면 다른 서비스를 찾는 것이 좋아요.',
+    example: {
+      bad: '<img src="http://example.com/pic.png">',
+      good: '<img src="https://example.com/pic.png">',
+    },
     aiPrompt: '내 코드의 http:// 주소를 전부 찾아서 https://로 바꿔줘. https를 지원하지 않는 주소가 있다면 알려줘.',
   },
   {
@@ -378,6 +406,10 @@ const rules = [
     explain: '새 탭으로 여는 링크에 rel="noopener"가 없으면, 열린 페이지가 원래 페이지를 조작할 수 있는 통로가 생겨요.',
     risk: '외부 링크라면 피싱 페이지로 원래 탭을 바꿔치기하는 공격(tabnabbing)이 가능해요.',
     fix: 'target="_blank"인 모든 링크에 rel="noopener noreferrer"를 추가하세요.',
+    example: {
+      bad: '<a href="https://..." target="_blank">자료 보기</a>',
+      good: '<a href="https://..." target="_blank" rel="noopener noreferrer">자료 보기</a>',
+    },
     aiPrompt: '내 HTML의 모든 target="_blank" 링크에 rel="noopener noreferrer"를 추가해줘.',
   },
   {

@@ -710,6 +710,58 @@ button {
   color: var(--muted);
 }
 
+.fix-example {
+  display: grid;
+  gap: 8px;
+}
+
+.ex-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+
+.ex-bad {
+  background: var(--danger-soft);
+}
+
+.ex-good {
+  background: #e8f6ef;
+}
+
+.ex-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.ex-bad .ex-tag {
+  color: var(--danger);
+}
+
+.ex-good .ex-tag {
+  color: var(--ok);
+}
+
+.ex-row pre {
+  margin: 0;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  overflow-x: auto;
+  flex: 1;
+  white-space: pre;
+}
+
+.ai-prompt-hint {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
 .ai-prompt-box {
   background: var(--primary-soft);
   border-radius: 10px;
