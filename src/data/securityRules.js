@@ -450,3 +450,40 @@ const rules = [
 ]
 
 export default rules
+
+// 프로젝트 단위 규칙: 한 줄 패턴이 아니라 파일 전체를 보고 "있어야 할 것이 없음"을 찾는다.
+// check(files)가 발견 위치 배열(비면 문제 없음)을 반환한다.
+export const projectRules = [
+  {
+    id: 'firebase-no-appcheck',
+    category: 'db',
+    severity: 'info',
+    title: 'Firebase를 쓰는데 App Check 흔적이 없어요',
+    explain:
+      'App Check는 "내 앱에서 온 요청만" 데이터베이스에 접근하게 하는 잠금장치예요. 이게 없으면 보안 규칙이 올바르더라도, 봇이 정상 경로로 무한 요청을 보내 무료 한도를 소진시켜 앱을 멈출 수 있어요.',
+    risk: '무료 한도 소진으로 그날 하루 서비스가 중단되거나, 유료 플랜이라면 요금이 발생할 수 있어요. "코드에 잘못이 없어도 당하는" 가용성 공격이에요.',
+    fix: 'Firebase 콘솔 → App Check에서 reCAPTCHA v3로 활성화하고, 초기화 코드에 initializeAppCheck를 추가하세요. 처음엔 "모니터링 모드"로 시작해 정상 요청이 막히지 않는지 확인한 뒤 강제 적용으로 바꾸면 안전해요.',
+    aiPrompt:
+      '내 웹앱이 Firebase를 쓰는데 App Check가 없어. reCAPTCHA v3 기반 App Check를 추가해줘 — initializeAppCheck 초기화 코드와, Firebase 콘솔에서 해야 할 설정 단계를 순서대로 알려줘.',
+    check(files) {
+      const hasAppCheck = files.some((f) => /app-?check/i.test(f.text))
+      if (hasAppCheck) return []
+      const occurrences = []
+      for (const f of files) {
+        if (!/firebase/i.test(f.text)) continue
+        const lines = f.text.split('\n')
+        for (let i = 0; i < lines.length; i++) {
+          if (/initializeApp\s*\(/.test(lines[i])) {
+            occurrences.push({
+              file: f.path,
+              line: i + 1,
+              snippet: lines[i].trim().slice(0, 160),
+            })
+            break
+          }
+        }
+      }
+      return occurrences
+    },
+  },
+]

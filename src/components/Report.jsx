@@ -4,6 +4,7 @@ import { GRADES } from '../lib/scoring.js'
 import { SEVERITIES } from '../data/securityRules.js'
 import { privacyItems, privacyAlwaysItems } from '../data/privacyChecklist.js'
 import { ethicsItems, ethicsAlwaysItems } from '../data/ethicsChecklist.js'
+import { opsItems, opsAlwaysItems } from '../data/opsChecklist.js'
 import { activeItems } from '../lib/scoring.js'
 
 function GradeCard({ title, icon, info }) {
@@ -31,11 +32,18 @@ export default function Report({
   privacyAnswers,
   ethicsGateAnswer,
   ethicsAnswers,
+  opsInfo,
+  opsGateAnswer,
+  opsAnswers,
 }) {
   const reportRef = useRef(null)
   const [saving, setSaving] = useState(false)
 
-  const anyDone = secInfo.grade !== 'pending' || privInfo.grade !== 'pending' || ethInfo.grade !== 'pending'
+  const anyDone =
+    secInfo.grade !== 'pending' ||
+    privInfo.grade !== 'pending' ||
+    ethInfo.grade !== 'pending' ||
+    opsInfo.grade !== 'pending'
 
   const noItems = (items, alwaysIds, gateAnswer, answers) =>
     gateAnswer == null
@@ -44,6 +52,7 @@ export default function Report({
 
   const privNo = noItems(privacyItems, privacyAlwaysItems, privacyGateAnswer, privacyAnswers)
   const ethNo = noItems(ethicsItems, ethicsAlwaysItems, ethicsGateAnswer, ethicsAnswers)
+  const opsNo = noItems(opsItems, opsAlwaysItems, opsGateAnswer, opsAnswers)
   const criticalFindings = scanResult
     ? scanResult.findings.filter((f) => f.rule.severity === 'critical')
     : []
@@ -103,9 +112,13 @@ export default function Report({
               <GradeCard title="보안" icon="🔍" info={secInfo} />
               <GradeCard title="개인정보" icon="🪪" info={privInfo} />
               <GradeCard title="AI 윤리" icon="🤖" info={ethInfo} />
+              <GradeCard title="운영·복구" icon="🧯" info={opsInfo} />
             </div>
 
-            {(criticalFindings.length > 0 || privNo.some((i) => i.weight >= 3) || ethNo.some((i) => i.weight >= 3)) && (
+            {(criticalFindings.length > 0 ||
+              privNo.some((i) => i.weight >= 3) ||
+              ethNo.some((i) => i.weight >= 3) ||
+              opsNo.some((i) => i.weight >= 3)) && (
               <div className="report-block report-urgent">
                 <h4>🔴 우선 조치가 필요해요</h4>
                 <ul>
@@ -120,11 +133,17 @@ export default function Report({
                   {ethNo.filter((i) => i.weight >= 3).map((i) => (
                     <li key={i.id}>[AI 윤리] {i.title}</li>
                   ))}
+                  {opsNo.filter((i) => i.weight >= 3).map((i) => (
+                    <li key={i.id}>[운영·복구] {i.title}</li>
+                  ))}
                 </ul>
               </div>
             )}
 
-            {(warningFindings.length > 0 || privNo.some((i) => i.weight < 3) || ethNo.some((i) => i.weight < 3)) && (
+            {(warningFindings.length > 0 ||
+              privNo.some((i) => i.weight < 3) ||
+              ethNo.some((i) => i.weight < 3) ||
+              opsNo.some((i) => i.weight < 3)) && (
               <div className="report-block">
                 <h4>🟠 개선하면 좋아요</h4>
                 <ul>
@@ -139,11 +158,18 @@ export default function Report({
                   {ethNo.filter((i) => i.weight < 3).map((i) => (
                     <li key={i.id}>[AI 윤리] {i.title}</li>
                   ))}
+                  {opsNo.filter((i) => i.weight < 3).map((i) => (
+                    <li key={i.id}>[운영·복구] {i.title}</li>
+                  ))}
                 </ul>
               </div>
             )}
 
-            {criticalFindings.length === 0 && warningFindings.length === 0 && privNo.length === 0 && ethNo.length === 0 && (
+            {criticalFindings.length === 0 &&
+              warningFindings.length === 0 &&
+              privNo.length === 0 &&
+              ethNo.length === 0 &&
+              opsNo.length === 0 && (
               <div className="report-block report-clear">
                 <h4>🎉 점검한 범위에서는 조치할 항목이 발견되지 않았어요</h4>
                 <p>배포 후에도 기능을 바꿀 때마다 다시 점검하는 습관이 앱을 안전하게 지켜줘요.</p>

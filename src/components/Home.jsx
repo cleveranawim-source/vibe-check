@@ -51,6 +51,17 @@ export default function Home({ goTo }) {
           </p>
           <span className="home-card-go">체크리스트 시작 →</span>
         </button>
+
+        <button className="home-card" onClick={() => goTo('ops')}>
+          <div className="home-card-icon">🧯</div>
+          <h3>운영·복구 점검</h3>
+          <p>
+            코드에 잘못이 없어도 당하는 공격이 있어요 — 무료 한도를 소진시키는 도배, 계정 탈취.
+            App Check, 2단계 인증, 백업, 긴급 대응까지 <strong>"무너졌을 때 다시 세우는
+            준비"</strong>를 5문항으로 점검해요.
+          </p>
+          <span className="home-card-go">체크리스트 시작 →</span>
+        </button>
       </div>
 
       <div className="home-how">

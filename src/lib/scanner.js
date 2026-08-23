@@ -1,4 +1,4 @@
-import rules from '../data/securityRules.js'
+import rules, { projectRules } from '../data/securityRules.js'
 
 const TEXT_EXTENSIONS = /\.(html?|css|jsx?|tsx?|mjs|cjs|json|txt|md|vue|svelte|rules|env|yml|yaml|xml|py)$/i
 const SKIP_PATH = /(^|\/)(node_modules|\.git|dist|build|\.next|coverage|vendor)(\/|$)/
@@ -81,6 +81,11 @@ export function scanFiles(files) {
         }
       }
     }
+  }
+
+  for (const pr of projectRules) {
+    const occurrences = pr.check(files)
+    if (occurrences.length > 0) byRule.set(pr.id, { rule: pr, occurrences })
   }
 
   const severityOrder = { critical: 0, warning: 1, info: 2 }

@@ -5,7 +5,8 @@ import Checklist from './components/Checklist.jsx'
 import Report from './components/Report.jsx'
 import { privacyGate, privacyItems, privacyAlwaysItems } from './data/privacyChecklist.js'
 import { ethicsGate, ethicsItems, ethicsAlwaysItems } from './data/ethicsChecklist.js'
-import { securityGrade, privacyGrade, ethicsGrade } from './lib/scoring.js'
+import { opsGate, opsItems, opsAlwaysItems } from './data/opsChecklist.js'
+import { securityGrade, privacyGrade, ethicsGrade, opsGrade } from './lib/scoring.js'
 
 const STORAGE_KEY = 'vibecheck-v1'
 
@@ -22,6 +23,7 @@ const TABS = [
   { id: 'scan', label: '보안 스캔', icon: '🔍' },
   { id: 'privacy', label: '개인정보', icon: '🪪' },
   { id: 'ethics', label: 'AI 윤리', icon: '🤖' },
+  { id: 'ops', label: '운영·복구', icon: '🧯' },
   { id: 'report', label: '리포트', icon: '📋' },
 ]
 
@@ -35,18 +37,29 @@ export default function App() {
   const [privacyAnswers, setPrivacyAnswers] = useState(saved.privacyAnswers || {})
   const [ethicsGateAnswer, setEthicsGateAnswer] = useState(saved.ethicsGateAnswer ?? null)
   const [ethicsAnswers, setEthicsAnswers] = useState(saved.ethicsAnswers || {})
+  const [opsGateAnswer, setOpsGateAnswer] = useState(saved.opsGateAnswer ?? null)
+  const [opsAnswers, setOpsAnswers] = useState(saved.opsAnswers || {})
 
   // 체크리스트 답변만 로컬에 저장 (코드·API 키는 저장하지 않음)
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ appName, privacyGateAnswer, privacyAnswers, ethicsGateAnswer, ethicsAnswers })
+      JSON.stringify({
+        appName,
+        privacyGateAnswer,
+        privacyAnswers,
+        ethicsGateAnswer,
+        ethicsAnswers,
+        opsGateAnswer,
+        opsAnswers,
+      })
     )
-  }, [appName, privacyGateAnswer, privacyAnswers, ethicsGateAnswer, ethicsAnswers])
+  }, [appName, privacyGateAnswer, privacyAnswers, ethicsGateAnswer, ethicsAnswers, opsGateAnswer, opsAnswers])
 
   const secInfo = securityGrade(scanResult)
   const privInfo = privacyGrade(privacyGateAnswer, privacyAnswers)
   const ethInfo = ethicsGrade(ethicsGateAnswer, ethicsAnswers)
+  const opsInfo = opsGrade(opsGateAnswer, opsAnswers)
 
   const goTo = (t) => {
     setTab(t)
@@ -62,6 +75,8 @@ export default function App() {
     setPrivacyAnswers({})
     setEthicsGateAnswer(null)
     setEthicsAnswers({})
+    setOpsGateAnswer(null)
+    setOpsAnswers({})
     localStorage.removeItem(STORAGE_KEY)
     setTab('home')
   }
@@ -127,6 +142,21 @@ export default function App() {
             gradeInfo={ethInfo}
           />
         )}
+        {tab === 'ops' && (
+          <Checklist
+            icon="🧯"
+            title="운영·복구 점검"
+            intro="코드의 문이 잠겨 있어도, 한도 소진 공격이나 계정 탈취로 서비스가 마비될 수 있어요. '무너졌을 때 다시 세우는 준비'까지 함께 점검해요."
+            gate={opsGate}
+            items={opsItems}
+            alwaysIds={opsAlwaysItems}
+            gateAnswer={opsGateAnswer}
+            answers={opsAnswers}
+            onGate={setOpsGateAnswer}
+            onAnswer={(id, v) => setOpsAnswers({ ...opsAnswers, [id]: v })}
+            gradeInfo={opsInfo}
+          />
+        )}
         {tab === 'report' && (
           <Report
             appName={appName}
@@ -139,6 +169,9 @@ export default function App() {
             privacyAnswers={privacyAnswers}
             ethicsGateAnswer={ethicsGateAnswer}
             ethicsAnswers={ethicsAnswers}
+            opsInfo={opsInfo}
+            opsGateAnswer={opsGateAnswer}
+            opsAnswers={opsAnswers}
           />
         )}
       </main>

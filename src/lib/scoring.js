@@ -1,6 +1,7 @@
 import { SEVERITIES } from '../data/securityRules.js'
 import { privacyItems, privacyAlwaysItems } from '../data/privacyChecklist.js'
 import { ethicsItems, ethicsAlwaysItems } from '../data/ethicsChecklist.js'
+import { opsItems, opsAlwaysItems } from '../data/opsChecklist.js'
 
 // 등급: safe(안전) / good(양호) / caution(주의) / danger(위험) / pending(미점검)
 export const GRADES = {
@@ -67,6 +68,10 @@ export function privacyGrade(gateAnswer, answers) {
 
 export function ethicsGrade(gateAnswer, answers) {
   return checklistGrade(ethicsItems, ethicsAlwaysItems, gateAnswer, answers)
+}
+
+export function opsGrade(gateAnswer, answers) {
+  return checklistGrade(opsItems, opsAlwaysItems, gateAnswer, answers)
 }
 
 export function activeItems(items, alwaysIds, gateAnswer) {
