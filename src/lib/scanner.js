@@ -2,7 +2,14 @@ import rules from '../data/securityRules.js'
 
 const TEXT_EXTENSIONS = /\.(html?|css|jsx?|tsx?|mjs|cjs|json|txt|md|vue|svelte|rules|env|yml|yaml|xml|py)$/i
 const SKIP_PATH = /(^|\/)(node_modules|\.git|dist|build|\.next|coverage|vendor)(\/|$)/
-const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+export const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
+
+// 경로 문자열 기준 판정 (GitHub 트리 등 File 객체가 없는 경우)
+export function isScannablePath(path) {
+  if (SKIP_PATH.test(path)) return false
+  const name = path.split('/').pop()
+  return TEXT_EXTENSIONS.test(name) || /^\.env/.test(name)
+}
 
 export function isScannableFile(file) {
   const path = file.webkitRelativePath || file.name

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { CATEGORIES, SEVERITIES } from '../data/securityRules.js'
 import { isScannableFile, scanFiles } from '../lib/scanner.js'
+import { parseGithubUrl, fetchRepoFiles } from '../lib/github.js'
 import { GRADES, securityGrade } from '../lib/scoring.js'
 import AiSection from './AiSection.jsx'
 
@@ -73,8 +74,46 @@ function FindingCard({ finding }) {
 export default function ScanSection({ files, setFiles, scanResult, setScanResult }) {
   const [pasted, setPasted] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [repoUrl, setRepoUrl] = useState('')
+  const [repoLoading, setRepoLoading] = useState(false)
+  const [repoProgress, setRepoProgress] = useState('')
+  const [repoError, setRepoError] = useState('')
+  const [repoNote, setRepoNote] = useState('')
   const fileInput = useRef(null)
   const folderInput = useRef(null)
+
+  const loadRepo = async () => {
+    const parsed = parseGithubUrl(repoUrl)
+    if (!parsed) {
+      setRepoError('주소 형식을 알 수 없어요. 예: https://github.com/아이디/저장소')
+      return
+    }
+    setRepoLoading(true)
+    setRepoError('')
+    setRepoNote('')
+    setRepoProgress('파일 목록 가져오는 중…')
+    try {
+      const result = await fetchRepoFiles({
+        ...parsed,
+        onProgress: (d, t) => setRepoProgress(`파일 내려받는 중… ${d}/${t}`),
+      })
+      if (result.files.length === 0) {
+        throw new Error('검사할 수 있는 파일(HTML/JS/CSS 등)이 이 저장소에 없어요.')
+      }
+      // 저장소 단위 검사: 이전 목록(다른 저장소·업로드 파일)과 섞이지 않도록 교체한다
+      setFiles(result.files)
+      setScanResult(scanFiles(result.files))
+      setRepoNote(
+        `✅ ${parsed.owner}/${parsed.repo} (${result.branch} 브랜치) — ${result.files.length}개 파일을 검사했어요.` +
+          (result.skippedCount > 0 ? ` (이미지·라이브러리 등 ${result.skippedCount}개 제외)` : '')
+      )
+    } catch (err) {
+      setRepoError(err.message)
+    } finally {
+      setRepoLoading(false)
+      setRepoProgress('')
+    }
+  }
 
   const addFiles = async (fileList) => {
     const next = [...files]
@@ -143,6 +182,40 @@ export default function ScanSection({ files, setFiles, scanResult, setScanResult
         <strong>코드는 브라우저 밖으로 전송되지 않아요</strong> — 검사는 전부 이 화면 안에서
         이루어집니다.
       </p>
+
+      <div className="gh-loader">
+        <label className="gh-label" htmlFor="gh-url">
+          GitHub 주소로 바로 검사
+        </label>
+        <div className="gh-row">
+          <input
+            id="gh-url"
+            type="text"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !repoLoading && repoUrl.trim()) loadRepo()
+            }}
+            placeholder="https://github.com/아이디/저장소 (배포 주소 ○○.github.io/앱 도 돼요)"
+            disabled={repoLoading}
+          />
+          <button
+            className="btn-primary gh-btn"
+            onClick={loadRepo}
+            disabled={repoLoading || !repoUrl.trim()}
+          >
+            {repoLoading ? repoProgress || '불러오는 중…' : '불러와서 검사'}
+          </button>
+        </div>
+        {repoError && <p className="gh-error">⚠️ {repoError}</p>}
+        {repoNote && <p className="gh-note-ok">{repoNote}</p>}
+        <p className="gh-hint">
+          공개 저장소만 가능해요. 파일은 GitHub에서 이 브라우저로 직접 내려받아 검사하며, 다른
+          서버로는 전송되지 않아요.
+        </p>
+      </div>
+
+      <div className="or-divider">또는 파일 직접 올리기</div>
 
       <div
         className={`dropzone ${dragOver ? 'drag-over' : ''}`}

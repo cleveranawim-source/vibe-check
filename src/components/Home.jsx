@@ -22,11 +22,12 @@ export default function Home({ goTo }) {
           <div className="home-card-icon">🔍</div>
           <h3>코드 보안 스캔</h3>
           <p>
-            노출된 API 키, 열린 데이터베이스 규칙, XSS 위험 등 바이브 코딩에서 자주 나오는 취약점
-            30여 종을 자동 검사해요. 발견된 문제마다 <strong>AI에게 붙여넣을 수정 요청
-            프롬프트</strong>까지 만들어 드려요.
+            <strong>GitHub 주소만 붙여넣으면</strong> 저장소를 통째로 자동 검사해요. 노출된 API 키,
+            열린 데이터베이스 규칙, XSS 위험 등 30여 종을 찾고, 발견된 문제마다{' '}
+            <strong>AI에게 붙여넣을 수정 요청 프롬프트</strong>까지 만들어 드려요. 파일 업로드도
+            돼요.
           </p>
-          <span className="home-card-go">파일 올리고 검사하기 →</span>
+          <span className="home-card-go">주소 넣고 검사하기 →</span>
         </button>
 
         <button className="home-card" onClick={() => goTo('privacy')}>
