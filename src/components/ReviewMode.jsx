@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { parseGithubUrl, fetchRepoFiles } from '../lib/github.js'
 import { scanFiles } from '../lib/scanner.js'
 import { securityGrade } from '../lib/scoring.js'
@@ -19,7 +19,21 @@ export default function ReviewMode({ onSaveRecord }) {
   const [apiKey, setApiKey] = useState('')
   const [model, setModel] = useState(AI_MODELS[0].id)
   const [busy, setBusy] = useState('')
+  const [busyDetail, setBusyDetail] = useState('')
+  const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState('')
+
+  // 작업 중 경과 시간 표시 — 긴 AI 대기에서 "멈춘 게 아님"을 보여준다
+  const isBusy = busy !== ''
+  useEffect(() => {
+    if (!isBusy) {
+      setElapsed(0)
+      return
+    }
+    const t0 = Date.now()
+    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - t0) / 1000)), 1000)
+    return () => clearInterval(iv)
+  }, [isBusy])
 
   const [repoMeta, setRepoMeta] = useState(null) // {owner, repo, branch, commitSha}
   const [files, setFiles] = useState([])
@@ -65,9 +79,18 @@ export default function ReviewMode({ onSaveRecord }) {
   const classify = async () => {
     if (!apiKey.trim()) return setError('심사자 API 키를 입력해 주세요.')
     setError('')
+    let received = 0
     try {
       setBusy('AI가 앱 분류를 추론하는 중…')
-      const cat = await inferCategory({ apiKey: apiKey.trim(), model, files })
+      const cat = await inferCategory({
+        apiKey: apiKey.trim(),
+        model,
+        files,
+        onText: (t) => {
+          received += t.length
+          setBusyDetail(`AI 응답 수신 중 (${received}자)`)
+        },
+      })
       setAiCategory(cat)
       setTrack(cat.category)
       setStep('category')
@@ -75,11 +98,13 @@ export default function ReviewMode({ onSaveRecord }) {
       setError(friendlyApiError(err))
     } finally {
       setBusy('')
+      setBusyDetail('')
     }
   }
 
   const runJudgment = async () => {
     setError('')
+    let received = 0
     try {
       setBusy('AI가 루브릭 판정 초안을 작성하는 중… (1~3분)')
       const { judgments: j, excluded } = await judgeRubric({
@@ -88,6 +113,10 @@ export default function ReviewMode({ onSaveRecord }) {
         files,
         track,
         scanSummary: scanSummaryText(),
+        onText: (t) => {
+          received += t.length
+          setBusyDetail(`AI 응답 ${(received / 1000).toFixed(1)}k자 수신 중`)
+        },
       })
       setJudgments(j)
       setExcludedFiles(excluded)
@@ -96,6 +125,7 @@ export default function ReviewMode({ onSaveRecord }) {
       setError(friendlyApiError(err))
     } finally {
       setBusy('')
+      setBusyDetail('')
     }
   }
 
@@ -175,7 +205,17 @@ export default function ReviewMode({ onSaveRecord }) {
       </p>
 
       {error && <div className="ai-error">⚠️ {error}</div>}
-      {busy && <div className="rm-busy">⏳ {busy}</div>}
+      {busy && (
+        <div className="rm-busy" role="status" aria-live="polite">
+          <span className="spinner" aria-hidden="true" />
+          <div className="rm-busy-text">
+            <strong>{busy}</strong>
+            <span className="rm-busy-sub">
+              {busyDetail ? `${busyDetail} · ` : ''}경과 {elapsed}초 — 화면이 멈춘 게 아니에요, 작업이 진행되고 있어요
+            </span>
+          </div>
+        </div>
+      )}
 
       {step === 'setup' && (
         <div className="rm-setup">

@@ -66,6 +66,8 @@ export function scanFiles(files) {
         const line = lines[i]
         // 극단적으로 긴 줄(번들)은 비밀키 계열만 검사
         if (line.length > 2000 && !rule.scanMinified) continue
+        // 규칙별 제외 조건 (예: Firebase 설정의 apiKey는 Google 키 노출 규칙에서 제외)
+        if (rule.excludeLine && rule.excludeLine.test(line)) continue
         rule.pattern.lastIndex = 0
         const m = rule.pattern.exec(line)
         if (m) {

@@ -27,6 +27,8 @@ const rules = [
     maskSecret: true,
     title: 'Google API 키가 코드에 노출됨',
     pattern: /AIza[0-9A-Za-z\-_]{35}/g,
+    // Firebase 웹 설정의 apiKey(공개돼도 되는 값)는 firebase-config 규칙이 별도로 안내하므로 여기서 제외
+    excludeLine: /apiKey\s*[:=]/,
     explain:
       'Google(지도, 시트, Gemini 등) API 키가 코드에 그대로 적혀 있어요. 웹에 올라간 코드는 누구나 "소스 보기"로 열어볼 수 있어서, 이 키는 이미 공개된 것과 같아요.',
     risk: '다른 사람이 내 키로 유료 API를 마음껏 호출해서 요금 폭탄을 맞거나, 키가 정지될 수 있어요. (Firebase 웹 설정의 apiKey는 예외 — 아래 Firebase 항목 참고)',

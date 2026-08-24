@@ -125,13 +125,14 @@ const CATEGORY_SYSTEM = `당신은 교사가 바이브 코딩으로 만든 프�
 - class_ops: 학급 운영·소통 — 알림, 자리배치, 모둠편성, 상담 예약 등.
 JSON만 출력: {"category":"...","confidence":0.0~1.0,"evidence":["코드에서 찾은 근거 (최대 3개)"],"reasoning":"한 문장"}`
 
-export async function inferCategory({ apiKey, model, files }) {
+export async function inferCategory({ apiKey, model, files, onText }) {
   const { text, excluded } = buildCodeSection(files)
   const raw = await callJson({
     apiKey,
     model,
     system: CATEGORY_SYSTEM,
     user: `다음 프로그램을 분류하세요.\n${text}`,
+    onText,
   })
   return { ...validateCategory(raw), excludedFiles: excluded }
 }

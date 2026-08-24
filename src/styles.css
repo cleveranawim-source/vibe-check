@@ -1313,9 +1313,38 @@ button {
 .rm-busy {
   background: var(--info-soft);
   border-radius: 10px;
-  padding: 12px 15px;
-  font-size: 0.9rem;
+  padding: 14px 16px;
+  font-size: 0.92rem;
   margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(74, 127, 181, 0.25);
+  border-top-color: var(--info);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rm-busy-text {
+  display: grid;
+  gap: 2px;
+}
+
+.rm-busy-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 .rm-setup { display: grid; gap: 14px; max-width: 560px; }
