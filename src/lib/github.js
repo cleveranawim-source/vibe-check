@@ -64,6 +64,11 @@ export async function fetchRepoFiles({ owner, repo, branch, onProgress }) {
     branch = info.default_branch
   }
 
+  const branchInfo = await ghJson(
+    `https://api.github.com/repos/${owner}/${repo}/branches/${encodeURIComponent(branch)}`
+  )
+  const commitSha = branchInfo.commit?.sha || ''
+
   const tree = await ghJson(
     `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`
   )
@@ -104,5 +109,5 @@ export async function fetchRepoFiles({ owner, repo, branch, onProgress }) {
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, selected.length) }, worker))
 
   files.sort((a, b) => a.path.localeCompare(b.path))
-  return { files, branch, skippedCount, truncated: !!tree.truncated }
+  return { files, branch, commitSha, skippedCount, truncated: !!tree.truncated }
 }
