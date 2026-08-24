@@ -1,0 +1,97 @@
+// 심사 루브릭 v1.0 — 판정의 재현성을 위해 버전 관리한다.
+// type: 'required'(하나라도 미충족이면 불합격 후보) | 'scored'(가중 점수)
+// aiVerifiable: true → AI가 코드에서 판정 초안 작성 / false → 심사자 수동 판정
+export const RUBRIC_VERSION = '1.0'
+
+export const TRACKS = {
+  admin: { label: '교무·행정 자동화', icon: '🗂️', desc: '성적·출결·명단·문서 처리 등 교사 업무용 도구 (학생이 사용자가 아님)' },
+  subject_tool: { label: '교과 수업 도구', icon: '📚', desc: '교사가 수업 진행에 조작하는 시연·판서·진행 도구' },
+  learning_content: { label: '학습 콘텐츠·활동', icon: '🎯', desc: '학생이 직접 사용하는 학습·활동 앱' },
+  class_ops: { label: '학급 운영·소통', icon: '🏫', desc: '알림, 자리배치, 모둠편성, 상담 예약 등 학급 운영 도구' },
+}
+
+const ALL = ['admin', 'subject_tool', 'learning_content', 'class_ops']
+const STUDENT_FACING = ['learning_content', 'class_ops']
+
+export const rubricItems = [
+  // ───── 필수 요건 ─────
+  { id: 'R-rrn', tracks: ALL, type: 'required', weight: 3, aiVerifiable: true,
+    question: '주민등록번호를 수집·보관·처리하지 않는다',
+    evidenceHint: '주민번호 입력 필드, 주민번호 형식 데이터, jumin/rrn 변수' },
+  { id: 'R-secrets', tracks: ALL, type: 'required', weight: 3, aiVerifiable: true,
+    question: '비밀키(API 키·토큰·개인키)가 코드·저장소에 노출되지 않는다',
+    evidenceHint: 'sk-, AIza, AKIA, ghp_ 등 키 패턴, 하드코딩된 비밀번호' },
+  { id: 'R-db-locked', tracks: ALL, type: 'required', weight: 3, aiVerifiable: true,
+    question: '데이터베이스 쓰기가 전체 공개(allow write: if true 등)로 열려 있지 않다',
+    evidenceHint: 'Firebase/RTDB 보안 규칙, Supabase RLS 언급' },
+  { id: 'R-under14', tracks: STUDENT_FACING, type: 'required', weight: 3, aiVerifiable: true,
+    question: '개인정보를 수집한다면, 만 14세 미만 보호자 동의에 대한 안내·절차가 앱에 있다 (수집하지 않으면 해당없음)',
+    evidenceHint: '동의 안내 화면, 수집 항목·목적 고지 텍스트' },
+  { id: 'R-crisis', tracks: STUDENT_FACING, type: 'required', weight: 3, aiVerifiable: true,
+    question: '학생이 감정·고민을 입력하는 기능이 있다면, 위기 안내(교사·1388 등)가 있다 (그런 기능이 없으면 해당없음)',
+    evidenceHint: '상담·감정 입력 UI, 1388·위기 안내 문구' },
+  { id: 'R-admin-ext', tracks: ['admin'], type: 'required', weight: 3, aiVerifiable: true,
+    question: '학생 실명·성적 등 실데이터가 외부 AI·외부 서버로 전송되지 않는다',
+    evidenceHint: 'fetch/API 호출에 학생 데이터가 실리는 경로, AI API 호출부' },
+  { id: 'R-admin-data', tracks: ['admin'], type: 'required', weight: 3, aiVerifiable: true,
+    question: '학생 데이터 파일(명단·성적 csv/xlsx 등)이 저장소·배포물에 포함되어 있지 않다',
+    evidenceHint: '이름·학번·연락처 열이 있는 데이터 파일' },
+
+  // ───── 점수 요건 (aiVerifiable) ─────
+  { id: 'S-minimal', tracks: ALL, type: 'scored', weight: 3, aiVerifiable: true,
+    question: '꼭 필요한 최소한의 개인정보만 수집한다 (닉네임·임의코드로 대체 가능한 것은 대체)',
+    evidenceHint: '입력 필드 목록, 저장되는 필드' },
+  { id: 'S-consent', tracks: STUDENT_FACING, type: 'scored', weight: 2, aiVerifiable: true,
+    question: '수집 전에 항목·목적·보관 기간을 알리는 안내가 있다',
+    evidenceHint: '첫 화면 안내문, 동의 버튼' },
+  { id: 'S-sensitive', tracks: STUDENT_FACING, type: 'scored', weight: 3, aiVerifiable: true,
+    question: '감정·건강·상담 기록 등 민감한 정보를 익명·가명으로 다루거나 기기 밖으로 내보내지 않는다',
+    evidenceHint: '감정기록 저장 구조, 식별자 종류' },
+  { id: 'S-overseas', tracks: ALL, type: 'scored', weight: 1, aiVerifiable: true,
+    question: 'Firebase 등 해외 서비스에 저장한다면 그 사실을 안내한다',
+    evidenceHint: '저장 위치 안내 문구' },
+  { id: 'S-access', tracks: STUDENT_FACING, type: 'scored', weight: 3, aiVerifiable: true,
+    question: '학생 A의 데이터를 학생 B나 외부인이 볼 수 없는 구조다',
+    evidenceHint: '조회 쿼리 범위, 교실 코드 구조, 보안 규칙' },
+  { id: 'S-xss', tracks: ALL, type: 'scored', weight: 3, aiVerifiable: true,
+    question: '사용자 입력이 검증 없이 HTML로 실행되는 경로(innerHTML 등)가 없다',
+    evidenceHint: 'innerHTML/eval/document.write에 변수 삽입' },
+  { id: 'S-https', tracks: ALL, type: 'scored', weight: 1, aiVerifiable: true,
+    question: '모든 리소스·전송이 https를 사용한다',
+    evidenceHint: 'http:// 주소' },
+  { id: 'S-shared-device', tracks: STUDENT_FACING, type: 'scored', weight: 2, aiVerifiable: true,
+    question: '공용 기기에서 이전 사용자의 정보가 남지 않는 처리(sessionStorage·기록 지우기 등)가 있다',
+    evidenceHint: 'localStorage 사용처, 초기화 버튼' },
+  { id: 'S-ai-transparency', tracks: ['learning_content'], type: 'scored', weight: 2, aiVerifiable: true,
+    question: 'AI 생성 콘텐츠·판정에 AI가 만든 것임이 표시된다 (AI 기능이 없으면 해당없음)',
+    evidenceHint: 'AI 배지·캡션 문구' },
+  { id: 'S-ai-fallibility', tracks: ['learning_content'], type: 'scored', weight: 2, aiVerifiable: true,
+    question: 'AI 판정류 기능에 "틀릴 수 있다"는 고지가 있다 (AI 기능이 없으면 해당없음)',
+    evidenceHint: '결과 화면 안내 문구' },
+  { id: 'S-quota', tracks: ALL, type: 'scored', weight: 2, aiVerifiable: true,
+    question: '한도 소진 공격 대비(App Check 등 요청 출처 제한)가 있다 (외부 DB를 안 쓰면 해당없음)',
+    evidenceHint: 'initializeAppCheck, reCAPTCHA' },
+  { id: 'S-write-guard', tracks: ALL, type: 'scored', weight: 2, aiVerifiable: true,
+    question: '쓰기 규칙에 크기·형식 검증 조건이 있어 무한 도배를 막는다 (외부 DB를 안 쓰면 해당없음)',
+    evidenceHint: '보안 규칙의 size()·타입 검사' },
+  { id: 'S-notice', tracks: ALL, type: 'scored', weight: 1, aiVerifiable: true,
+    question: '운영자·문의처 안내가 앱에 있다',
+    evidenceHint: '하단·정보 화면의 운영자 표기' },
+
+  // ───── 심사자 수동 판정 (aiVerifiable: false) ─────
+  { id: 'H-edu-fit', tracks: ['learning_content'], type: 'scored', weight: 3, aiVerifiable: false,
+    question: '교육적 적절성 — 발달단계에 맞고, 낙인·서열화·비교 조장 요소가 없다',
+    evidenceHint: '심사자가 실제 사용 흐름을 체험하고 판단' },
+  { id: 'H-standards', tracks: ['learning_content'], type: 'scored', weight: 2, aiVerifiable: false,
+    question: '명시한 성취기준과 활동 내용이 실제로 부합한다',
+    evidenceHint: '태깅된 성취기준 대비 활동 내용' },
+  { id: 'H-usability', tracks: ['subject_tool', 'learning_content'], type: 'scored', weight: 1, aiVerifiable: false,
+    question: '수업 맥락에서 무리 없이 사용 가능하다 (준비 부담, 기기 요구, 소요 시간)',
+    evidenceHint: '심사자 실사용 소감' },
+  { id: 'H-retention', tracks: ALL, type: 'scored', weight: 2, aiVerifiable: false,
+    question: '활동 종료 후 데이터 파기 계획이 확인된다',
+    evidenceHint: '운영 계획 문서·심사 시 문답' },
+  { id: 'H-2fa', tracks: ALL, type: 'scored', weight: 1, aiVerifiable: false,
+    question: '운영 계정(GitHub·클라우드)에 2단계 인증이 켜져 있다',
+    evidenceHint: '심사 시 계정 설정 확인' },
+]
