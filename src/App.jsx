@@ -3,6 +3,7 @@ import Home from './components/Home.jsx'
 import ScanSection from './components/ScanSection.jsx'
 import Checklist from './components/Checklist.jsx'
 import Report from './components/Report.jsx'
+import ReviewMode from './components/ReviewMode.jsx'
 import { privacyGate, privacyItems, privacyAlwaysItems } from './data/privacyChecklist.js'
 import { ethicsGate, ethicsItems, ethicsAlwaysItems } from './data/ethicsChecklist.js'
 import { opsGate, opsItems, opsAlwaysItems } from './data/opsChecklist.js'
@@ -30,6 +31,7 @@ const TABS = [
 export default function App() {
   const saved = loadSaved()
   const [tab, setTab] = useState('home')
+  const [mode, setMode] = useState('self') // 'self' | 'review'
   const [files, setFiles] = useState([])
   const [scanResult, setScanResult] = useState(null)
   const [appName, setAppName] = useState(saved.appName || '')
@@ -100,9 +102,15 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button className="review-toggle" onClick={() => setMode(mode === 'self' ? 'review' : 'self')}>
+          {mode === 'self' ? '⚖️ 심사 모드' : '↩ 자가점검'}
+        </button>
       </header>
 
       <main className="main">
+        {mode === 'review' && <ReviewMode onExit={() => setMode('self')} />}
+        {mode === 'self' && (
+        <>
         {tab === 'home' && <Home goTo={goTo} />}
         {tab === 'scan' && (
           <ScanSection
@@ -173,6 +181,8 @@ export default function App() {
             opsGateAnswer={opsGateAnswer}
             opsAnswers={opsAnswers}
           />
+        )}
+        </>
         )}
       </main>
 
