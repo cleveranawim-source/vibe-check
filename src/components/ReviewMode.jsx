@@ -99,11 +99,22 @@ export default function ReviewMode({ onExit }) {
   const aiItems = trackItems.filter((it) => it.aiVerifiable)
   const humanItems = trackItems.filter((it) => !it.aiVerifiable)
 
+  // 판정 기록이 있으면 이탈 전에 확인 — 수십 분치 심사 작업의 유실 방지
+  const exitSafely = () => {
+    if (
+      Object.keys(judgments).length > 0 &&
+      !confirm('심사 판정 기록이 사라집니다. 자가점검으로 돌아갈까요?')
+    ) {
+      return
+    }
+    onExit()
+  }
+
   return (
     <section className="panel review-mode">
       <div className="panel-head">
         <h2><span className="panel-icon">⚖️</span> 심사 모드 <span className="rm-beta">베타</span></h2>
-        <button className="btn-secondary" onClick={onExit}>자가점검으로 돌아가기</button>
+        <button className="btn-secondary" onClick={exitSafely}>자가점검으로 돌아가기</button>
       </div>
       <p className="panel-intro">
         AI가 코드에서 증거를 수집해 루브릭 v{RUBRIC_VERSION} 판정 초안을 만들고, 심사자가 최종 판정합니다.
@@ -121,10 +132,10 @@ export default function ReviewMode({ onExit }) {
           </label>
           <label className="ai-label">심사자 Anthropic API 키 (저장되지 않음)
             <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-ant-..." autoComplete="off" />
+              placeholder="sk-ant-..." autoComplete="off" disabled={!!busy} />
           </label>
           <label className="ai-label">모델
-            <select value={model} onChange={(e) => setModel(e.target.value)}>
+            <select value={model} onChange={(e) => setModel(e.target.value)} disabled={!!busy}>
               {AI_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
             </select>
           </label>
@@ -146,11 +157,14 @@ export default function ReviewMode({ onExit }) {
             <p className="rm-reasoning">{aiCategory.reasoning}</p>
             <ul>{aiCategory.evidence.map((e, i) => (<li key={i}>{e}</li>))}</ul>
           </div>
+          {aiCategory.excludedFiles?.length > 0 && (
+            <div className="ai-notice"><p>⚠️ 용량 초과로 분류 분석에서 제외된 파일: {aiCategory.excludedFiles.join(', ')}</p></div>
+          )}
           <div className="rm-track-pick">
             <strong>심사자 확정 (트랙 선택)</strong>
             {Object.entries(TRACKS).map(([key, t]) => (
               <label key={key} className="rm-track-option">
-                <input type="radio" name="track" checked={track === key} onChange={() => setTrack(key)} />
+                <input type="radio" name="track" checked={track === key} onChange={() => setTrack(key)} disabled={!!busy} />
                 <span>{t.icon} {t.label}</span> <em>{t.desc}</em>
               </label>
             ))}
@@ -159,16 +173,16 @@ export default function ReviewMode({ onExit }) {
             <div className="rm-standards">
               <strong>성취기준 태깅 (선택)</strong>
               <div className="rm-standards-row">
-                <select value={standards.subject} onChange={(e) => setStandards({ ...standards, subject: e.target.value })}>
+                <select value={standards.subject} disabled={!!busy} onChange={(e) => setStandards({ ...standards, subject: e.target.value })}>
                   <option value="">교과 선택</option>
                   {SUBJECTS.map((s) => (<option key={s} value={s}>{s}</option>))}
                 </select>
-                <select value={standards.gradeBand} onChange={(e) => setStandards({ ...standards, gradeBand: e.target.value })}>
+                <select value={standards.gradeBand} disabled={!!busy} onChange={(e) => setStandards({ ...standards, gradeBand: e.target.value })}>
                   <option value="">학년군 선택</option>
                   {GRADE_BANDS.map((g) => (<option key={g} value={g}>{g}</option>))}
                 </select>
               </div>
-              <textarea rows={2} value={standards.codes} placeholder="성취기준 코드·문장 (예: [9국01-02] …)"
+              <textarea rows={2} value={standards.codes} disabled={!!busy} placeholder="성취기준 코드·문장 (예: [9국01-02] …)"
                 onChange={(e) => setStandards({ ...standards, codes: e.target.value })} />
             </div>
           )}
@@ -255,7 +269,7 @@ export default function ReviewMode({ onExit }) {
             repoMeta={repoMeta}
             track={track}
             standards={track === 'learning_content' ? standards : null}
-            scanCounts={securityGrade(scanResult).counts}
+            scanCounts={securityGrade(scanResult).counts ?? { critical: 0, warning: 0, info: 0 }}
             judgments={judgments}
             overrides={overrides}
             humanInputs={humanInputs}

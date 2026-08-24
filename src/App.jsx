@@ -90,21 +90,25 @@ export default function App() {
           🛡️ <strong>바이브체크</strong>
           <span className="logo-sub">교사 바이브 코딩 안심 점검소</span>
         </button>
-        <nav className="tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              className={tab === t.id ? 'tab active' : 'tab'}
-              onClick={() => goTo(t.id)}
-            >
-              <span className="tab-icon">{t.icon}</span>
-              {t.label}
+        {mode === 'self' && (
+          <>
+            <nav className="tabs">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  className={tab === t.id ? 'tab active' : 'tab'}
+                  onClick={() => goTo(t.id)}
+                >
+                  <span className="tab-icon">{t.icon}</span>
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+            <button className="review-toggle" onClick={() => setMode('review')}>
+              ⚖️ 심사 모드
             </button>
-          ))}
-        </nav>
-        <button className="review-toggle" onClick={() => setMode(mode === 'self' ? 'review' : 'self')}>
-          {mode === 'self' ? '⚖️ 심사 모드' : '↩ 자가점검'}
-        </button>
+          </>
+        )}
       </header>
 
       <main className="main">

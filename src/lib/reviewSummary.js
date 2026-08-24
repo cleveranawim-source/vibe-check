@@ -7,14 +7,19 @@ export const STATUS_LABELS = {
 }
 
 // 최종 판정 우선순위: 심사자 오버라이드 > AI 판정(aiVerifiable) 또는 심사자 수동 입력
+// ||를 쓰는 이유: verdict가 빈 문자열('판정 선택' 미완료)인 경우도 needs_human으로 수렴해야 한다
 export function finalVerdict(item, judgments, overrides, humanInputs) {
   if (overrides[item.id]?.verdict) return overrides[item.id].verdict
-  if (item.aiVerifiable) return judgments[item.id]?.verdict ?? 'needs_human'
-  return humanInputs[item.id]?.verdict ?? 'needs_human'
+  if (item.aiVerifiable) return judgments[item.id]?.verdict || 'needs_human'
+  return humanInputs[item.id]?.verdict || 'needs_human'
 }
 
 export function computeSummary(track, judgments, overrides, humanInputs) {
   const items = rubricItems.filter((it) => it.tracks.includes(track))
+  // 항목이 하나도 없는 트랙(비정상 값)은 절대 합격 후보가 되면 안 된다
+  if (items.length === 0) {
+    return { items, requiredFails: [], needsHuman: [], score: 0, status: 'hold' }
+  }
   const requiredFails = []
   const needsHuman = []
   let earned = 0

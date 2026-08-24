@@ -69,9 +69,11 @@ export async function fetchRepoFiles({ owner, repo, branch, onProgress }) {
   )
   const commitSha = branchInfo.commit?.sha || ''
 
-  const tree = await ghJson(
-    `https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`
-  )
+  // 이후 조회는 브랜치명이 아니라 커밋 SHA 기준 — "이 심사는 커밋 X에 대한 것"이 실제로 성립하려면
+  // 로드 도중 새 커밋이 푸시되거나 raw CDN 캐시가 낡은 파일을 주는 경우를 배제해야 한다.
+  const ref = commitSha || encodeURIComponent(branch)
+
+  const tree = await ghJson(`https://api.github.com/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`)
 
   const blobs = (tree.tree || []).filter((e) => e.type === 'blob')
   const candidates = blobs.filter((e) => isScannablePath(e.path) && (e.size ?? 0) <= MAX_FILE_SIZE)
@@ -93,7 +95,7 @@ export async function fetchRepoFiles({ owner, repo, branch, onProgress }) {
       const e = queue.shift()
       try {
         const res = await fetch(
-          encodeURI(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${e.path}`)
+          encodeURI(`https://raw.githubusercontent.com/${owner}/${repo}/${commitSha || branch}/${e.path}`)
         )
         if (res.ok) {
           const text = await res.text()

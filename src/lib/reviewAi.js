@@ -25,7 +25,10 @@ export function extractJson(text) {
 
 export function validateCategory(obj) {
   if (!obj || typeof obj !== 'object') throw new Error('분류 결과 형식 오류')
-  if (!TRACKS[obj.category]) throw new Error(`알 수 없는 분류: ${obj.category}`)
+  // hasOwnProperty: '__proto__' 같은 프로토타입 체인 키가 검증을 통과하지 못하도록
+  if (!Object.prototype.hasOwnProperty.call(TRACKS, obj.category)) {
+    throw new Error(`알 수 없는 분류: ${obj.category}`)
+  }
   return {
     category: obj.category,
     confidence: Math.min(1, Math.max(0, Number(obj.confidence) || 0)),
@@ -97,6 +100,9 @@ async function callJson({ apiKey, model, system, user, onText }) {
     if (onText) stream.on('text', onText)
     const final = await stream.finalMessage()
     if (final.stop_reason === 'refusal') throw new Error('모델이 이 요청의 처리를 거절했어요.')
+    if (final.stop_reason === 'max_tokens') {
+      throw new Error('응답이 길이 제한으로 잘렸어요. 파일 수를 줄여 다시 시도해 주세요.')
+    }
     const text = final.content.filter((b) => b.type === 'text').map((b) => b.text).join('')
     return extractJson(text)
   }
@@ -120,14 +126,14 @@ const CATEGORY_SYSTEM = `당신은 교사가 바이브 코딩으로 만든 프�
 JSON만 출력: {"category":"...","confidence":0.0~1.0,"evidence":["코드에서 찾은 근거 (최대 3개)"],"reasoning":"한 문장"}`
 
 export async function inferCategory({ apiKey, model, files }) {
-  const { text } = buildCodeSection(files)
+  const { text, excluded } = buildCodeSection(files)
   const raw = await callJson({
     apiKey,
     model,
     system: CATEGORY_SYSTEM,
     user: `다음 프로그램을 분류하세요.\n${text}`,
   })
-  return validateCategory(raw)
+  return { ...validateCategory(raw), excludedFiles: excluded }
 }
 
 const JUDGE_SYSTEM = `당신은 교사 제작 교육용 프로그램의 공적 심사를 위한 코드 검증관입니다.

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { extractJson, validateCategory, validateJudgments } from '../src/lib/reviewAi.js'
+import { extractJson, validateCategory, validateJudgments, buildCodeSection } from '../src/lib/reviewAi.js'
+import { MAX_AI_CHARS } from '../src/lib/aiReview.js'
 import { rubricItems } from '../src/data/rubric.js'
 
 describe('extractJson', () => {
@@ -12,6 +13,19 @@ describe('extractJson', () => {
   it('JSON이 없으면 throw', () => {
     expect(() => extractJson('json 없음')).toThrow()
   })
+  it('잘린 JSON은 throw (조용한 부분 파싱 없음)', () => {
+    expect(() => extractJson('[{"itemId":"R-rrn","verdict":"pa')).toThrow()
+  })
+})
+
+describe('buildCodeSection', () => {
+  it('상한 초과 파일은 excluded에 명시된다 (조용한 절단 없음)', () => {
+    const big = { path: 'big.js', text: 'x'.repeat(MAX_AI_CHARS) }
+    const small = { path: 'small.js', text: 'hello' }
+    const { included, excluded } = buildCodeSection([small, big])
+    expect(included).toContain('small.js')
+    expect(excluded).toContain('big.js')
+  })
 })
 
 describe('validateCategory', () => {
@@ -21,6 +35,11 @@ describe('validateCategory', () => {
   })
   it('알 수 없는 분류는 throw', () => {
     expect(() => validateCategory({ category: 'game' })).toThrow()
+  })
+  it('프로토타입 체인 키는 throw — 빈 루브릭 우회 방지', () => {
+    expect(() => validateCategory({ category: '__proto__' })).toThrow()
+    expect(() => validateCategory({ category: 'constructor' })).toThrow()
+    expect(() => validateCategory({ category: 'toString' })).toThrow()
   })
   it('confidence는 0~1로 클램프', () => {
     expect(validateCategory({ category: 'admin', confidence: 7 }).confidence).toBe(1)

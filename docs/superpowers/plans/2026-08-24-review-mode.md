@@ -1307,6 +1307,17 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>" && git push
 
 ---
 
+## 독립 코드 리뷰 반영 (2026-08-24, 구현 후)
+
+독립 리뷰에서 확정 결함 4건 발견·수정 완료 (회귀 테스트 추가):
+
+1. **빈 문자열 verdict 유령 판정** — finalVerdict의 `??`를 `||`로 (판정 미선택이 hold를 우회하던 버그)
+2. **프로토타입 체인 키 통과** — validateCategory에 hasOwnProperty 검사 + computeSummary 빈 트랙은 hold (빈 루브릭 "합격 후보 100점" 차단)
+3. **판정 중 트랙 변경 가능** — busy 중 라디오·입력 disabled (트랙-판정 세트 불일치 방지)
+4. **커밋 해시 고정의 실질** — Task 5의 원안(브랜치명 기준 트리·raw 조회)은 로드 중 푸시·CDN 캐시로 SHA 보증이 깨질 수 있음 → **트리·raw 조회를 커밋 SHA 기준으로 변경** (이 계획서 Task 5의 결함이었음)
+
+추가 반영: max_tokens 절단 구분 안내, 심사 기록 이탈 시 confirm 가드, 분류 단계 제외 파일 고지, 인쇄 시 심사 UI 숨김, 심사 중 헤더 탭 숨김.
+
 ## Self-Review 결과
 
 - **스펙 커버리지:** 심사 흐름 ①~⑤(Task 5·7), 신뢰성 원칙(Task 4 validateJudgments + JUDGE_SYSTEM), 루브릭 2층·버전(Task 2), 변조 방지 커밋 해시(Task 5·6), 공개 모의심사(Task 7 intro 문구), 성취기준 태깅(Task 7), 비범위 준수(제출함·계정·대장 없음) — 전부 대응됨.

@@ -1421,7 +1421,10 @@ button {
   .report-actions,
   .report-name,
   .review-toggle,
-  .rm-busy {
+  .rm-busy,
+  .review-mode .panel-head,
+  .review-mode .panel-intro,
+  .ai-error {
     display: none !important;
   }
 
