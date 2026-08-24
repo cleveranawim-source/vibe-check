@@ -14,6 +14,7 @@ export default function ReviewReport({
   track,
   standards, // { subject, gradeBand, codes } | null
   scanCounts, // { critical, warning, info }
+  scanFindings = [], // 규칙 스캔 발견 항목 — 개선 권고 섹션에 사용
   judgments,
   overrides,
   humanInputs,
@@ -93,6 +94,22 @@ export default function ReviewReport({
           })}
         </tbody>
       </table>
+
+      {scanFindings.filter((f) => f.rule.severity !== 'info').length > 0 && (
+        <div className="rr-opinion rr-recommend">
+          <h4>개선 권고 (제작 교사 회신용)</h4>
+          <ul>
+            {scanFindings
+              .filter((f) => f.rule.severity !== 'info')
+              .slice(0, 10)
+              .map((f) => (
+                <li key={f.rule.id}>
+                  <strong>{f.rule.title}</strong> ({f.occurrences.length}곳) — {f.rule.fix}
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
 
       {opinion && (
         <div className="rr-opinion">

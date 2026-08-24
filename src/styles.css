@@ -1382,6 +1382,32 @@ button {
 }
 .rm-override-row input { flex: 1; min-width: 200px; }
 
+.rm-loaded { display: grid; gap: 14px; }
+
+.rm-scan-box {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 18px;
+  font-size: 0.92rem;
+}
+
+.rm-scan-list {
+  list-style: none;
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.87rem;
+}
+
+/* ───────── ledger ───────── */
+.ledger-wrap { overflow-x: auto; }
+.ledger-table { font-size: 0.85rem; }
+.ledger-table a { color: var(--primary-deep); }
+.ledger-pass { color: var(--ok); font-weight: 700; }
+.ledger-hold { color: var(--warn); font-weight: 700; }
+.ledger-fail { color: var(--danger); font-weight: 700; }
+
 /* ───────── review report ───────── */
 .review-report { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px 26px; }
 .rr-header { text-align: center; margin-bottom: 18px; }

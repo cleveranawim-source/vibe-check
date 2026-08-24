@@ -5,14 +5,16 @@ import { securityGrade } from '../lib/scoring.js'
 import { AI_MODELS, friendlyApiError } from '../lib/aiReview.js'
 import { TRACKS, rubricItems, RUBRIC_VERSION } from '../data/rubric.js'
 import { inferCategory, judgeRubric, VERDICT_LABELS } from '../lib/reviewAi.js'
+import { computeSummary } from '../lib/reviewSummary.js'
+import { SEVERITIES } from '../data/securityRules.js'
 import ReviewReport from './ReviewReport.jsx'
 
 const SUBJECTS = ['국어', '도덕', '사회', '역사', '수학', '과학', '기술·가정', '정보', '체육', '음악', '미술', '영어', '기타']
 const GRADE_BANDS = ['초1-2', '초3-4', '초5-6', '중1-3', '고1-3']
 const VERDICT_OPTIONS = ['pass', 'fail', 'na', 'needs_human']
 
-export default function ReviewMode({ onExit }) {
-  const [step, setStep] = useState('setup') // setup | category | judged | report
+export default function ReviewMode({ onSaveRecord }) {
+  const [step, setStep] = useState('setup') // setup | loaded | category | judged | report
   const [repoUrl, setRepoUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [model, setModel] = useState(AI_MODELS[0].id)
@@ -39,10 +41,10 @@ export default function ReviewMode({ onExit }) {
       .join('\n')
   }
 
-  const loadAndClassify = async () => {
+  // ① 저장소 로드 + 규칙 스캔 — API 키 없이 가능 (선별·사전 확인 단계)
+  const loadRepo = async () => {
     const parsed = parseGithubUrl(repoUrl)
     if (!parsed) return setError('주소 형식을 알 수 없어요. 예: https://github.com/아이디/저장소')
-    if (!apiKey.trim()) return setError('심사자 API 키를 입력해 주세요.')
     setError('')
     try {
       setBusy('저장소 불러오는 중…')
@@ -50,10 +52,22 @@ export default function ReviewMode({ onExit }) {
       if (result.files.length === 0) throw new Error('검사할 수 있는 파일이 없어요.')
       setRepoMeta({ owner: parsed.owner, repo: parsed.repo, branch: result.branch, commitSha: result.commitSha })
       setFiles(result.files)
-      const scan = scanFiles(result.files)
-      setScanResult(scan)
+      setScanResult(scanFiles(result.files))
+      setStep('loaded')
+    } catch (err) {
+      setError(friendlyApiError(err))
+    } finally {
+      setBusy('')
+    }
+  }
+
+  // ② AI 분류 추론 — 여기부터 심사자 API 키 필요
+  const classify = async () => {
+    if (!apiKey.trim()) return setError('심사자 API 키를 입력해 주세요.')
+    setError('')
+    try {
       setBusy('AI가 앱 분류를 추론하는 중…')
-      const cat = await inferCategory({ apiKey: apiKey.trim(), model, files: result.files })
+      const cat = await inferCategory({ apiKey: apiKey.trim(), model, files })
       setAiCategory(cat)
       setTrack(cat.category)
       setStep('category')
@@ -99,26 +113,65 @@ export default function ReviewMode({ onExit }) {
   const aiItems = trackItems.filter((it) => it.aiVerifiable)
   const humanItems = trackItems.filter((it) => !it.aiVerifiable)
 
-  // 판정 기록이 있으면 이탈 전에 확인 — 수십 분치 심사 작업의 유실 방지
-  const exitSafely = () => {
+  // 새 심사 시작 — 진행 중 판정이 있으면 확인
+  const resetReview = () => {
     if (
       Object.keys(judgments).length > 0 &&
-      !confirm('심사 판정 기록이 사라집니다. 자가점검으로 돌아갈까요?')
+      !confirm('진행 중인 심사 기록이 사라집니다. 새 심사를 시작할까요?')
     ) {
       return
     }
-    onExit()
+    setStep('setup')
+    setRepoUrl('')
+    setRepoMeta(null)
+    setFiles([])
+    setScanResult(null)
+    setAiCategory(null)
+    setTrack(null)
+    setStandards({ subject: '', gradeBand: '', codes: '' })
+    setJudgments({})
+    setExcludedFiles([])
+    setOverrides({})
+    setHumanInputs({})
+    setOpinion('')
+    setError('')
+  }
+
+  const saveRecord = () => {
+    const summary = computeSummary(track, judgments, overrides, humanInputs)
+    onSaveRecord({
+      id: crypto.randomUUID(),
+      date: new Date().toISOString(),
+      repoUrl,
+      owner: repoMeta.owner,
+      repo: repoMeta.repo,
+      branch: repoMeta.branch,
+      commitSha: repoMeta.commitSha,
+      track,
+      trackLabel: TRACKS[track].label,
+      standards: track === 'learning_content' ? standards : null,
+      rubricVersion: RUBRIC_VERSION,
+      status: summary.status,
+      score: summary.score,
+      requiredFails: summary.requiredFails.length,
+      needsHuman: summary.needsHuman.length,
+      reviewerName,
+      opinion,
+    })
   }
 
   return (
     <section className="panel review-mode">
       <div className="panel-head">
-        <h2><span className="panel-icon">⚖️</span> 심사 모드 <span className="rm-beta">베타</span></h2>
-        <button className="btn-secondary" onClick={exitSafely}>자가점검으로 돌아가기</button>
+        <h2><span className="panel-icon">⚖️</span> 앱 심사 <span className="rm-beta">베타</span></h2>
+        {step !== 'setup' && (
+          <button className="btn-secondary" onClick={resetReview}>새 심사 시작</button>
+        )}
       </div>
       <p className="panel-intro">
-        AI가 코드에서 증거를 수집해 루브릭 v{RUBRIC_VERSION} 판정 초안을 만들고, 심사자가 최종 판정합니다.
-        교사가 제출 전 스스로 돌려보는 <strong>모의심사</strong>로도 쓸 수 있어요. 분석 시 코드가 Anthropic 서버로 전송됩니다.
+        교사 제작 앱의 점검·검수·평가 도구입니다. AI가 코드에서 증거를 수집해 루브릭 v{RUBRIC_VERSION} 판정
+        초안을 만들고, <strong>최종 판정은 심사자가</strong> 합니다. AI 분석 단계에서 코드가 Anthropic 서버로
+        전송됩니다. 심사 대상 코드는 신뢰할 수 없는 입력으로 취급하세요 — 근거 인용을 반드시 직접 확인하세요.
       </p>
 
       {error && <div className="ai-error">⚠️ {error}</div>}
@@ -128,8 +181,38 @@ export default function ReviewMode({ onExit }) {
         <div className="rm-setup">
           <label className="ai-label">심사 대상 GitHub 주소
             <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !busy && repoUrl.trim()) loadRepo() }}
               placeholder="https://github.com/아이디/저장소" disabled={!!busy} />
           </label>
+          <button className="btn-primary" onClick={loadRepo} disabled={!!busy || !repoUrl.trim()}>
+            ① 저장소 불러오기 + 규칙 스캔
+          </button>
+          <p className="gh-hint">이 단계는 API 키 없이 실행됩니다. 코드는 GitHub에서 이 브라우저로 직접 내려받아요.</p>
+        </div>
+      )}
+
+      {step === 'loaded' && repoMeta && (
+        <div className="rm-loaded">
+          <div className="rm-repo-line">
+            📦 {repoMeta.owner}/{repoMeta.repo} ({repoMeta.branch}) · 커밋 <code>{repoMeta.commitSha.slice(0, 12)}</code> · 파일 {files.length}개
+          </div>
+          <div className="rm-scan-box">
+            <strong>자동 규칙 스캔: {securityGrade(scanResult).score}점</strong>
+            {scanResult.findings.length === 0 ? (
+              <p className="rm-reasoning">등록된 패턴에서 발견된 문제 없음</p>
+            ) : (
+              <ul className="rm-scan-list">
+                {scanResult.findings.map((f) => (
+                  <li key={f.rule.id}>
+                    <span className="sev-badge" style={{ background: SEVERITIES[f.rule.severity].color }}>
+                      {SEVERITIES[f.rule.severity].label}
+                    </span>{' '}
+                    {f.rule.title} ({f.occurrences.length}곳)
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <label className="ai-label">심사자 Anthropic API 키 (저장되지 않음)
             <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
               placeholder="sk-ant-..." autoComplete="off" disabled={!!busy} />
@@ -139,8 +222,8 @@ export default function ReviewMode({ onExit }) {
               {AI_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
             </select>
           </label>
-          <button className="btn-primary" onClick={loadAndClassify} disabled={!!busy || !repoUrl.trim() || !apiKey.trim()}>
-            ① 저장소 불러오기 + 분류 추론
+          <button className="btn-primary" onClick={classify} disabled={!!busy || !apiKey.trim()}>
+            ② AI 분류 추론
           </button>
         </div>
       )}
@@ -187,7 +270,7 @@ export default function ReviewMode({ onExit }) {
             </div>
           )}
           <button className="btn-primary" onClick={runJudgment} disabled={!!busy || !track}>
-            ② 이 트랙으로 루브릭 판정 시작
+            ③ 이 트랙으로 루브릭 판정 시작
           </button>
         </div>
       )}
@@ -258,7 +341,7 @@ export default function ReviewMode({ onExit }) {
           <label className="ai-label rm-reviewer">심사자 이름
             <input type="text" value={reviewerName} onChange={(e) => setReviewerName(e.target.value)} placeholder="예: ○○중학교 ○○○" />
           </label>
-          <button className="btn-primary" onClick={() => setStep('report')}>③ 심사 보고서 생성</button>
+          <button className="btn-primary" onClick={() => setStep('report')}>④ 심사 보고서 생성</button>
         </div>
       )}
 
@@ -270,6 +353,7 @@ export default function ReviewMode({ onExit }) {
             track={track}
             standards={track === 'learning_content' ? standards : null}
             scanCounts={securityGrade(scanResult).counts ?? { critical: 0, warning: 0, info: 0 }}
+            scanFindings={scanResult?.findings ?? []}
             judgments={judgments}
             overrides={overrides}
             humanInputs={humanInputs}
@@ -278,6 +362,7 @@ export default function ReviewMode({ onExit }) {
           />
           <div className="report-actions">
             <button className="btn-primary" onClick={() => window.print()}>🖨️ 인쇄 / PDF 저장</button>
+            <button className="btn-secondary" onClick={saveRecord}>📚 심사 기록에 저장</button>
             <button className="btn-secondary" onClick={() => setStep('judged')}>판정으로 돌아가기</button>
           </div>
         </div>
