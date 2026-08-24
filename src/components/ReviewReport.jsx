@@ -64,6 +64,7 @@ export default function ReviewReport({
         )}
       </div>
 
+      <div className="rr-table-wrap">
       <table className="rr-table">
         <thead>
           <tr><th>구분</th><th>항목</th><th>판정</th><th>근거·비고</th></tr>
@@ -94,6 +95,7 @@ export default function ReviewReport({
           })}
         </tbody>
       </table>
+      </div>
 
       {scanFindings.filter((f) => f.rule.severity !== 'info').length > 0 && (
         <div className="rr-opinion rr-recommend">

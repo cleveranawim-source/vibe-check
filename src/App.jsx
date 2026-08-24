@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ReviewMode from './components/ReviewMode.jsx'
 import ReviewLedger from './components/ReviewLedger.jsx'
+import DemoReport from './dev/DemoReport.jsx'
 
 const LEDGER_KEY = 'vibecheck-ledger-v1'
 
@@ -19,6 +20,17 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(LEDGER_KEY, JSON.stringify(ledger))
   }, [ledger])
+
+  // UI 작업용 데모 보고서 (#demo-report)
+  if (window.location.hash === '#demo-report') {
+    return (
+      <div className="app">
+        <main className="main">
+          <DemoReport />
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="app">

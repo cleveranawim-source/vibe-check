@@ -1457,9 +1457,21 @@ button {
 .rr-table th { background: var(--bg); }
 .rr-row-fail { background: #fffafa; }
 
-.rr-evidence { font-size: 0.78rem; margin: 3px 0; }
+.rr-evidence { font-size: 0.78rem; margin: 3px 0; overflow-wrap: anywhere; }
 .rr-evidence span { color: var(--muted); font-weight: 600; }
-.rr-evidence code { background: #f4f2ec; border-radius: 5px; padding: 2px 6px; font-size: 0.75rem; }
+.rr-evidence code {
+  display: block;
+  background: #f4f2ec;
+  border-radius: 5px;
+  padding: 4px 8px;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.rr-table-wrap { overflow-x: auto; }
 .rr-override { font-size: 0.8rem; color: var(--danger); font-weight: 600; margin-top: 3px; }
 .rr-reasoning { font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
 
@@ -1491,6 +1503,62 @@ button {
 
   body {
     background: #fff;
+  }
+}
+
+/* 좁은 화면: 판정표를 카드 목록으로 변환 (가로 잘림 방지) */
+@media (max-width: 640px) {
+  .rr-table thead {
+    display: none;
+  }
+
+  .rr-table,
+  .rr-table tbody,
+  .rr-table tr,
+  .rr-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .rr-table tr {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper);
+    margin-bottom: 10px;
+    padding: 10px 0;
+  }
+
+  .rr-table tr.rr-row-fail {
+    border-color: #f0c4c4;
+  }
+
+  .rr-table td {
+    border: none;
+    padding: 2px 14px;
+  }
+
+  .rr-table td:nth-child(1) {
+    display: inline-block;
+    width: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--bg);
+    border-radius: 99px;
+    padding: 2px 10px;
+    margin: 0 0 4px 14px;
+  }
+
+  .rr-table td:nth-child(2) {
+    font-weight: 700;
+  }
+
+  .rr-table td:nth-child(3) {
+    padding-top: 4px;
+  }
+
+  .rr-meta th {
+    white-space: nowrap;
   }
 }
 
