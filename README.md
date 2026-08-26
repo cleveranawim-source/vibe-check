@@ -50,6 +50,7 @@ npm run build && npm run deploy   # gh-pages 배포
 - `src/components/ReviewMode.jsx` / `ReviewReport.jsx` / `ReviewLedger.jsx`
 
 설계·계획 문서: `docs/superpowers/` (스펙, 구현 계획, 독립 리뷰 반영 기록)
+심사 기준의 법령·공식문서 근거: `docs/근거-법령-공식문서.md`
 
 ## 다음 단계
 

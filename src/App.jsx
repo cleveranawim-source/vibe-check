@@ -70,7 +70,7 @@ export default function App() {
           에듀 세이프(EduSafe) 심사 시스템 — AI 판정은 초안이며 최종 판정 권한은 심사자에게 있습니다. 심사 기록은 이
           브라우저에만 저장됩니다.
         </p>
-        <p className="footer-links">근거: 개인정보보호법 · 교육부 「교육분야 인공지능 윤리원칙」(2022) · 루브릭 v1.0</p>
+        <p className="footer-links">근거: 개인정보 보호법 · AI 기본법(2026 시행) · 교육부 「교육분야 인공지능 윤리원칙」(2022) · 루브릭 v1.0</p>
       </footer>
     </div>
   )

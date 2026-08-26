@@ -12,6 +12,7 @@
 
 설계 합의와 결정 이력: `docs/superpowers/specs/2026-08-24-review-mode-design.md`
 구현 계획 + 독립 리뷰 반영 기록: `docs/superpowers/plans/2026-08-24-review-mode.md`
+심사 기준의 법령·공식문서 근거: `docs/근거-법령-공식문서.md` (루브릭 개정 시 함께 재확인)
 
 ## 아키텍처
 
