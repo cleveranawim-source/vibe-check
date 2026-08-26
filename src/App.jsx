@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ReviewMode from './components/ReviewMode.jsx'
 import ReviewLedger from './components/ReviewLedger.jsx'
+import AboutPage from './components/AboutPage.jsx'
 import DemoReport from './dev/DemoReport.jsx'
 
 // 구 이름(바이브체크) 시절 키 — 바꾸면 기존 심사 기록이 유실되므로 유지
@@ -15,7 +16,7 @@ function loadLedger() {
 }
 
 export default function App() {
-  const [view, setView] = useState('review') // 'review' | 'ledger'
+  const [view, setView] = useState('about') // 'about' | 'review' | 'ledger'
   const [ledger, setLedger] = useState(loadLedger)
 
   useEffect(() => {
@@ -36,11 +37,14 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <button className="logo" onClick={() => setView('review')}>
+        <button className="logo" onClick={() => setView('about')}>
           🛡️ <strong>에듀 세이프</strong>
           <span className="logo-sub">교사 제작 앱 심사·검수 시스템</span>
         </button>
         <nav className="tabs">
+          <button className={view === 'about' ? 'tab active' : 'tab'} onClick={() => setView('about')}>
+            🏠 소개
+          </button>
           <button className={view === 'review' ? 'tab active' : 'tab'} onClick={() => setView('review')}>
             ⚖️ 심사
           </button>
@@ -63,6 +67,7 @@ export default function App() {
         {view === 'ledger' && (
           <ReviewLedger records={ledger} onRemove={(id) => setLedger((prev) => prev.filter((r) => r.id !== id))} />
         )}
+        {view === 'about' && <AboutPage onStart={() => setView('review')} />}
       </main>
 
       <footer className="footer">
