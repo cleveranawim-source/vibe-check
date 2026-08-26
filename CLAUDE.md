@@ -1,4 +1,7 @@
-# CLAUDE.md — 바이브체크 (vibe-check)
+# CLAUDE.md — 에듀 세이프 (EduSafe, 구 바이브체크)
+
+앱 이름은 2026-08-27부터 **에듀 세이프(EduSafe)**. 저장소 주소·배포 URL·localStorage 키
+(`vibecheck-ledger-v1`)는 구 이름을 유지한다 (URL 파손·기록 유실 방지).
 
 ## 정체성 (중요 — 2026-08-24 확정)
 

@@ -3,6 +3,7 @@ import ReviewMode from './components/ReviewMode.jsx'
 import ReviewLedger from './components/ReviewLedger.jsx'
 import DemoReport from './dev/DemoReport.jsx'
 
+// 구 이름(바이브체크) 시절 키 — 바꾸면 기존 심사 기록이 유실되므로 유지
 const LEDGER_KEY = 'vibecheck-ledger-v1'
 
 function loadLedger() {
@@ -36,7 +37,7 @@ export default function App() {
     <div className="app">
       <header className="header">
         <button className="logo" onClick={() => setView('review')}>
-          🛡️ <strong>바이브체크</strong>
+          🛡️ <strong>에듀 세이프</strong>
           <span className="logo-sub">교사 제작 앱 심사·검수 시스템</span>
         </button>
         <nav className="tabs">
@@ -66,7 +67,7 @@ export default function App() {
 
       <footer className="footer">
         <p>
-          바이브체크 심사 시스템 — AI 판정은 초안이며 최종 판정 권한은 심사자에게 있습니다. 심사 기록은 이
+          에듀 세이프(EduSafe) 심사 시스템 — AI 판정은 초안이며 최종 판정 권한은 심사자에게 있습니다. 심사 기록은 이
           브라우저에만 저장됩니다.
         </p>
         <p className="footer-links">근거: 개인정보보호법 · 교육부 「교육분야 인공지능 윤리원칙」(2022) · 루브릭 v1.0</p>

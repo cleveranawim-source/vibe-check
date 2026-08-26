@@ -26,7 +26,7 @@ export default function ReviewReport({
   return (
     <div className="review-report">
       <div className="rr-header">
-        <div className="report-logo">🛡️ 바이브체크 심사 보고서</div>
+        <div className="report-logo">🛡️ 에듀 세이프 심사 보고서</div>
         <h3>
           {repoMeta.owner}/{repoMeta.repo}
         </h3>

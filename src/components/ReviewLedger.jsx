@@ -11,7 +11,7 @@ export default function ReviewLedger({ records, onRemove }) {
     const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `바이브체크-심사기록-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `에듀세이프-심사기록-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(a.href)
   }
