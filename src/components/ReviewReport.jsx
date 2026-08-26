@@ -22,18 +22,21 @@ export default function ReviewReport({
   reviewerName,
 }) {
   const summary = computeSummary(track, judgments, overrides, humanInputs)
+  const isLocal = repoMeta.source === 'local'
 
   return (
     <div className="review-report">
       <div className="rr-header">
         <div className="report-logo">🛡️ 에듀 세이프 심사 보고서</div>
         <h3>
-          {repoMeta.owner}/{repoMeta.repo}
+          {isLocal ? repoMeta.repo : `${repoMeta.owner}/${repoMeta.repo}`}
         </h3>
         <table className="rr-meta">
           <tbody>
-            <tr><th>저장소</th><td>{repoUrl}</td></tr>
-            <tr><th>브랜치 / 커밋</th><td>{repoMeta.branch} / <code>{repoMeta.commitSha.slice(0, 12) || '(확인 불가)'}</code></td></tr>
+            <tr><th>대상</th><td>{isLocal ? `로컬 폴더 업로드 (${repoMeta.repo})` : repoUrl}</td></tr>
+            <tr><th>{isLocal ? '무결성 지문' : '브랜치 / 커밋'}</th><td>{isLocal
+              ? <code>SHA-256 {repoMeta.commitSha.slice(0, 16)}</code>
+              : <>{repoMeta.branch} / <code>{repoMeta.commitSha.slice(0, 12) || '(확인 불가)'}</code></>}</td></tr>
             <tr><th>심사일</th><td>{new Date().toLocaleDateString('ko-KR')}</td></tr>
             <tr><th>루브릭</th><td>v{RUBRIC_VERSION}</td></tr>
             <tr><th>분류</th><td>{TRACKS[track].icon} {TRACKS[track].label}</td></tr>
@@ -78,7 +81,10 @@ export default function ReviewReport({
             return (
               <tr key={it.id} className={v === 'fail' ? 'rr-row-fail' : ''}>
                 <td>{it.type === 'required' ? '필수' : `점수(${it.weight})`}</td>
-                <td>{it.question}</td>
+                <td>
+                  {it.question}
+                  <div className="rr-plain">{it.plain}</div>
+                </td>
                 <td className={`rr-verdict rr-${v}`}>{VERDICT_LABELS[v]}{ov ? ' (번복)' : ''}</td>
                 <td>
                   {j?.evidence?.slice(0, 2).map((e, i) => (
@@ -126,8 +132,9 @@ export default function ReviewReport({
       </div>
 
       <p className="report-disclaimer">
-        본 보고서는 커밋 {repoMeta.commitSha.slice(0, 12) || '(미상)'}에 대한 심사 기록입니다. AI 판정은 초안이며
-        최종 판정 권한은 심사자에게 있습니다. 코드 수정 시 재심사가 필요합니다. · 루브릭 v{RUBRIC_VERSION}
+        본 보고서는 {isLocal ? '콘텐츠 지문' : '커밋'} {repoMeta.commitSha.slice(0, 12) || '(미상)'}에 대한 심사
+        기록입니다. AI 판정은 초안이며 최종 판정 권한은 심사자에게 있습니다. 코드 수정 시 재심사가 필요합니다.
+        · 루브릭 v{RUBRIC_VERSION}
       </p>
     </div>
   )

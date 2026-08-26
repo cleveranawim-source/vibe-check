@@ -25,8 +25,8 @@ export default function ReviewLedger({ records, onRemove }) {
         )}
       </div>
       <p className="panel-intro">
-        이 브라우저에 저장된 심사 대장입니다. 커밋 해시가 함께 기록되어 "어느 시점의 코드를 심사했는지"가
-        남습니다. 기관 공식 대장으로 옮길 때는 JSON 내보내기를 사용하세요.
+        이 브라우저에 저장된 심사 대장입니다. 커밋 해시(폴더 업로드는 콘텐츠 지문)가 함께 기록되어
+        "어느 시점의 코드를 심사했는지"가 남습니다. 기관 공식 대장으로 옮길 때는 JSON 내보내기를 사용하세요.
       </p>
 
       {records.length === 0 ? (
@@ -36,7 +36,7 @@ export default function ReviewLedger({ records, onRemove }) {
           <table className="rr-table ledger-table">
             <thead>
               <tr>
-                <th>심사일</th><th>앱</th><th>분류</th><th>커밋</th><th>판정</th><th>점수</th><th>심사자</th><th></th>
+                <th>심사일</th><th>앱</th><th>분류</th><th>커밋/지문</th><th>판정</th><th>점수</th><th>심사자</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -44,10 +44,14 @@ export default function ReviewLedger({ records, onRemove }) {
                 <tr key={r.id}>
                   <td>{new Date(r.date).toLocaleDateString('ko-KR')}</td>
                   <td>
-                    <a href={r.repoUrl.startsWith('http') ? r.repoUrl : `https://github.com/${r.owner}/${r.repo}`}
-                      target="_blank" rel="noopener noreferrer">
-                      {r.owner}/{r.repo}
-                    </a>
+                    {r.source === 'local' || !r.owner ? (
+                      <>📁 {r.repo}</>
+                    ) : (
+                      <a href={r.repoUrl.startsWith('http') ? r.repoUrl : `https://github.com/${r.owner}/${r.repo}`}
+                        target="_blank" rel="noopener noreferrer">
+                        {r.owner}/{r.repo}
+                      </a>
+                    )}
                   </td>
                   <td>{r.trackLabel}</td>
                   <td><code>{(r.commitSha || '').slice(0, 8)}</code></td>

@@ -10,6 +10,11 @@
 심사 인프라다. 자기신고 배제, 증거 중심: AI가 코드에서 증거를 수집해 판정 초안을 만들고
 **최종 판정은 심사자(사람)가** 한다.
 
+2026-08-27 갱신: **심사자 전용 도구로 확정** (설계 문서의 "모의심사 공개" 방침 폐기).
+GitHub 공개 저장소 외에 **프로젝트 폴더 업로드 심사** 지원 — 커밋 SHA 대신 파일 전체의
+SHA-256 콘텐츠 지문을 기록 (`src/lib/localFolder.js`). 루브릭 v1.1: 모든 항목에
+`plain`(비전문가용 쉬운 설명) 추가, 판정 화면·보고서에 표시.
+
 설계 합의와 결정 이력: `docs/superpowers/specs/2026-08-24-review-mode-design.md`
 구현 계획 + 독립 리뷰 반영 기록: `docs/superpowers/plans/2026-08-24-review-mode.md`
 심사 기준의 법령·공식문서 근거: `docs/근거-법령-공식문서.md` (루브릭 개정 시 함께 재확인)
@@ -31,7 +36,7 @@ React 18 + Vite 6 정적 앱. AI는 심사자의 API 키로 브라우저에서 �
 
 ```bash
 npm run dev      # localhost:5173
-npm test         # vitest 31개 — 수정 후 반드시 실행
+npm test         # vitest 34개 — 수정 후 반드시 실행
 npm run build && npm run deploy   # gh-pages 배포 (커밋·푸시도 함께 할 것)
 ```
 

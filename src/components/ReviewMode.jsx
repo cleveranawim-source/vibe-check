@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { parseGithubUrl, fetchRepoFiles } from '../lib/github.js'
+import { readLocalFolder } from '../lib/localFolder.js'
 import { scanFiles } from '../lib/scanner.js'
 import { securityGrade } from '../lib/scoring.js'
 import { AI_MODELS, friendlyApiError } from '../lib/aiReview.js'
@@ -8,6 +9,9 @@ import { inferCategory, judgeRubric, VERDICT_LABELS } from '../lib/reviewAi.js'
 import { computeSummary } from '../lib/reviewSummary.js'
 import { SEVERITIES } from '../data/securityRules.js'
 import ReviewReport from './ReviewReport.jsx'
+
+const metaTitle = (m) => (m.owner ? `${m.owner}/${m.repo}` : m.repo)
+const shaWord = (m) => (m.source === 'local' ? '지문' : '커밋')
 
 const SUBJECTS = ['국어', '도덕', '사회', '역사', '수학', '과학', '기술·가정', '정보', '체육', '음악', '미술', '영어', '기타']
 const GRADE_BANDS = ['초1-2', '초3-4', '초5-6', '중1-3', '고1-3']
@@ -35,7 +39,9 @@ export default function ReviewMode({ onSaveRecord }) {
     return () => clearInterval(iv)
   }, [isBusy])
 
-  const [repoMeta, setRepoMeta] = useState(null) // {owner, repo, branch, commitSha}
+  // github: {source, owner, repo, branch, commitSha} / local: {source, repo: 폴더명, branch: '로컬 업로드', commitSha: 콘텐츠 지문}
+  const [repoMeta, setRepoMeta] = useState(null)
+  const folderInputRef = useRef(null)
   const [files, setFiles] = useState([])
   const [scanResult, setScanResult] = useState(null)
   const [aiCategory, setAiCategory] = useState(null)
@@ -64,7 +70,7 @@ export default function ReviewMode({ onSaveRecord }) {
       setBusy('저장소 불러오는 중…')
       const result = await fetchRepoFiles({ ...parsed, onProgress: (d, t) => setBusy(`파일 내려받는 중… ${d}/${t}`) })
       if (result.files.length === 0) throw new Error('검사할 수 있는 파일이 없어요.')
-      setRepoMeta({ owner: parsed.owner, repo: parsed.repo, branch: result.branch, commitSha: result.commitSha })
+      setRepoMeta({ source: 'github', owner: parsed.owner, repo: parsed.repo, branch: result.branch, commitSha: result.commitSha })
       setFiles(result.files)
       setScanResult(scanFiles(result.files))
       setStep('loaded')
@@ -72,6 +78,26 @@ export default function ReviewMode({ onSaveRecord }) {
       setError(friendlyApiError(err))
     } finally {
       setBusy('')
+    }
+  }
+
+  // ①′ 폴더 업로드 — 비공개 저장소·미공개 프로젝트용. 파일은 이 브라우저 밖으로 나가지 않는다(AI 단계 전까지)
+  const loadFolder = async (fileList) => {
+    if (!fileList || fileList.length === 0) return
+    setError('')
+    try {
+      setBusy('폴더 파일 읽는 중…')
+      const result = await readLocalFolder(fileList)
+      setRepoUrl('')
+      setRepoMeta({ source: 'local', owner: null, repo: result.folderName, branch: '로컬 업로드', commitSha: result.contentSha })
+      setFiles(result.files)
+      setScanResult(scanFiles(result.files))
+      setStep('loaded')
+    } catch (err) {
+      setError(friendlyApiError(err))
+    } finally {
+      setBusy('')
+      if (folderInputRef.current) folderInputRef.current.value = ''
     }
   }
 
@@ -172,6 +198,7 @@ export default function ReviewMode({ onSaveRecord }) {
     onSaveRecord({
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
+      source: repoMeta.source,
       repoUrl,
       owner: repoMeta.owner,
       repo: repoMeta.repo,
@@ -227,14 +254,23 @@ export default function ReviewMode({ onSaveRecord }) {
           <button className="btn-primary" onClick={loadRepo} disabled={!!busy || !repoUrl.trim()}>
             ① 저장소 불러오기 + 규칙 스캔
           </button>
-          <p className="gh-hint">이 단계는 API 키 없이 실행됩니다. 코드는 GitHub에서 이 브라우저로 직접 내려받아요.</p>
+          <div className="or-divider">또는</div>
+          <input ref={folderInputRef} type="file" webkitdirectory="" multiple style={{ display: 'none' }}
+            onChange={(e) => loadFolder(e.target.files)} />
+          <button className="btn-secondary" onClick={() => folderInputRef.current?.click()} disabled={!!busy}>
+            📁 프로젝트 폴더 업로드 + 규칙 스캔
+          </button>
+          <p className="gh-hint">
+            이 단계는 API 키 없이 실행됩니다. GitHub 주소는 공개 저장소만, 비공개·미공개 프로젝트는 폴더
+            업로드를 사용하세요. 폴더 심사에는 커밋 해시 대신 파일 내용 전체의 SHA-256 지문이 기록됩니다.
+          </p>
         </div>
       )}
 
       {step === 'loaded' && repoMeta && (
         <div className="rm-loaded">
           <div className="rm-repo-line">
-            📦 {repoMeta.owner}/{repoMeta.repo} ({repoMeta.branch}) · 커밋 <code>{repoMeta.commitSha.slice(0, 12)}</code> · 파일 {files.length}개
+            {repoMeta.source === 'local' ? '📁' : '📦'} {metaTitle(repoMeta)} ({repoMeta.branch}) · {shaWord(repoMeta)} <code>{repoMeta.commitSha.slice(0, 12)}</code> · 파일 {files.length}개
           </div>
           <div className="rm-scan-box">
             <strong>자동 규칙 스캔: {securityGrade(scanResult).score}점</strong>
@@ -271,7 +307,7 @@ export default function ReviewMode({ onSaveRecord }) {
       {step === 'category' && aiCategory && (
         <div className="rm-category">
           <div className="rm-repo-line">
-            📦 {repoMeta.owner}/{repoMeta.repo} ({repoMeta.branch}) · 커밋 <code>{repoMeta.commitSha.slice(0, 12)}</code> · 파일 {files.length}개
+            {repoMeta.source === 'local' ? '📁' : '📦'} {metaTitle(repoMeta)} ({repoMeta.branch}) · {shaWord(repoMeta)} <code>{repoMeta.commitSha.slice(0, 12)}</code> · 파일 {files.length}개
             {scanResult && ` · 자동 스캔 ${securityGrade(scanResult).score}점`}
           </div>
           <div className="rm-ai-suggest">
@@ -333,6 +369,7 @@ export default function ReviewMode({ onSaveRecord }) {
                     {VERDICT_LABELS[ov?.verdict || j?.verdict]}{ov ? ' (번복)' : ''}
                   </span>
                 </div>
+                <p className="rm-plain">💡 {it.plain}</p>
                 {j?.evidence?.map((e, i) => (
                   <div key={i} className="rr-evidence"><span>{e.file}:{e.line}</span> <code>{e.quote}</code></div>
                 ))}
@@ -360,6 +397,7 @@ export default function ReviewMode({ onSaveRecord }) {
                   <span className={`rm-badge ${it.type}`}>{it.type === 'required' ? '필수' : `점수 ${it.weight}`}</span>
                   <strong>{it.question}</strong>
                 </div>
+                <p className="rm-plain">💡 {it.plain}</p>
                 <p className="rm-reasoning">{it.evidenceHint}</p>
                 <div className="rm-override-row">
                   <select value={hi?.verdict || ''} onChange={(e) =>

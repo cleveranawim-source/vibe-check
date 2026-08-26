@@ -52,10 +52,10 @@ export default function AboutPage({ onStart }) {
           <em>증거로</em> 검증합니다
         </h1>
         <p className="hero-sub">
-          에듀 세이프(EduSafe)는 교사가 바이브 코딩으로 만든 앱을 공인 기관이
-          점검·검수·평가하기 위한 심사 시스템입니다.
+          에듀 세이프(EduSafe)는 교사가 바이브 코딩으로 만든 앱의 보안과 전반적 내용을
+          공인 기관의 심사자가 최종 심사하기 위한 시스템입니다.
         </p>
-        <span className="hero-trust">자기신고 없음 · 증거 중심 · 최종 판정은 사람이 합니다</span>
+        <span className="hero-trust">심사자 전용 도구 · 증거 중심 · 최종 판정은 사람이 합니다</span>
       </section>
 
       <section className="home-why">
@@ -83,10 +83,11 @@ export default function AboutPage({ onStart }) {
             </p>
           </div>
           <div className="why-item">
-            <strong>🌱 혁신을 멈추지 않게</strong>
+            <strong>🧑‍⚖️ 심사자의 도구입니다</strong>
             <p>
-              목표는 금지가 아니라 안전한 통과입니다. 심사 도구를 공개해 누구나 제출 전에
-              모의심사를 해볼 수 있습니다.
+              이 앱은 <strong>심사자 전용</strong>입니다. 공개 GitHub 주소뿐 아니라 제출받은
+              프로젝트 폴더를 직접 업로드해 비공개 앱도 심사할 수 있습니다. 목표는 금지가
+              아니라 안전한 통과입니다.
             </p>
           </div>
         </div>
@@ -96,16 +97,18 @@ export default function AboutPage({ onStart }) {
         <h2>어떻게 심사하나요</h2>
         <ol>
           <li>
-            <strong>저장소 로드 + 규칙 스캔</strong> — GitHub 주소만으로 30여 종의 보안 규칙을
-            검사합니다 (API 키 불필요).
+            <strong>저장소 로드 또는 폴더 업로드 + 규칙 스캔</strong> — GitHub 주소나 제출받은
+            프로젝트 폴더로 30여 종의 보안 규칙을 검사합니다 (API 키 불필요). 폴더 심사에는
+            커밋 해시 대신 파일 전체의 SHA-256 지문이 기록됩니다.
           </li>
           <li>
             <strong>AI 분류 추론</strong> — 교무·행정 / 교과 도구 / 학습 콘텐츠 / 학급 운영
             4트랙 중 어디인지 근거와 함께 제안하고, 심사자가 확정합니다.
           </li>
           <li>
-            <strong>루브릭 판정</strong> — 루브릭 v1.0(필수 7 + 점수 14 + 수동 5)에 대해 AI가
-            판정 초안을 작성합니다. 모든 판정에 근거 코드 인용이 강제됩니다.
+            <strong>루브릭 판정</strong> — 루브릭(필수 7 + 점수 14 + 수동 5, 항목마다 쉬운
+            설명 포함)에 대해 AI가 판정 초안을 작성합니다. 모든 판정에 근거 코드 인용이
+            강제됩니다.
           </li>
           <li>
             <strong>심사자 승인·번복</strong> — 항목마다 근거를 확인하고 승인 또는 번복하며,

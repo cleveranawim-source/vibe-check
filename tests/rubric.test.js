@@ -20,6 +20,7 @@ describe('rubric integrity', () => {
       expect(it.weight).toBeGreaterThanOrEqual(1)
       expect(typeof it.aiVerifiable).toBe('boolean')
       expect(it.question.length).toBeGreaterThan(5)
+      expect(it.plain.length).toBeGreaterThan(10) // 비전문가용 쉬운 설명 (v1.1)
     }
   })
   it('모든 트랙에 필수 항목이 1개 이상', () => {
