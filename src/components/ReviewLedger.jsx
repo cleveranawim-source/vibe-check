@@ -52,6 +52,11 @@ export default function ReviewLedger({ records, onRemove }) {
                         {r.owner}/{r.repo}
                       </a>
                     )}
+                    {r.round > 1 && (
+                      <span className="ledger-round" title={r.prevSha ? `이전 심사: ${r.prevSha.slice(0, 8)}` : '재심사'}>
+                        🔁 {r.round}회차
+                      </span>
+                    )}
                   </td>
                   <td>{r.trackLabel}</td>
                   <td><code>{(r.commitSha || '').slice(0, 8)}</code></td>

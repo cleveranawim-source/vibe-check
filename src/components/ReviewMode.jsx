@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { parseGithubUrl, fetchRepoFiles } from '../lib/github.js'
 import { readLocalFolder } from '../lib/localFolder.js'
 import { checkSubmission } from '../lib/submissionGate.js'
+import { buildSupplementRequest } from '../lib/supplementRequest.js'
 import { scanFiles } from '../lib/scanner.js'
 import { securityGrade } from '../lib/scoring.js'
 import { AI_MODELS, friendlyApiError } from '../lib/aiReview.js'
@@ -85,6 +86,18 @@ export default function ReviewMode({ onSaveRecord }) {
   const [humanInputs, setHumanInputs] = useState({})
   const [opinion, setOpinion] = useState('')
   const [reviewerName, setReviewerName] = useState('')
+  const [suppCopied, setSuppCopied] = useState(false)
+
+  const copySupplement = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setSuppCopied(true)
+      setTimeout(() => setSuppCopied(false), 2500)
+    } catch {
+      // 클립보드 권한이 없는 환경 — 미리보기에서 직접 복사하도록 안내
+      alert('복사 권한이 없어요. 아래 미리보기를 펼쳐 직접 복사해 주세요.')
+    }
+  }
 
   const scanSummaryText = () => {
     if (!scanResult) return ''
@@ -482,28 +495,42 @@ export default function ReviewMode({ onSaveRecord }) {
         </div>
       )}
 
-      {step === 'report' && (
-        <div>
-          <ReviewReport
-            repoUrl={repoUrl}
-            repoMeta={repoMeta}
-            track={track}
-            standards={track === 'learning_content' ? standards : null}
-            scanCounts={securityGrade(scanResult).counts ?? { critical: 0, warning: 0, info: 0 }}
-            scanFindings={scanResult?.findings ?? []}
-            judgments={judgments}
-            overrides={overrides}
-            humanInputs={humanInputs}
-            opinion={opinion}
-            reviewerName={reviewerName}
-          />
-          <div className="report-actions">
-            <button className="btn-primary" onClick={() => window.print()}>🖨️ 인쇄 / PDF 저장</button>
-            <button className="btn-secondary" onClick={saveRecord}>📚 심사 기록에 저장</button>
-            <button className="btn-secondary" onClick={() => setStep('judged')}>판정으로 돌아가기</button>
+      {step === 'report' && (() => {
+        const supp = buildSupplementRequest({ repoMeta, track, judgments, overrides, humanInputs, gate })
+        return (
+          <div>
+            <ReviewReport
+              repoUrl={repoUrl}
+              repoMeta={repoMeta}
+              track={track}
+              standards={track === 'learning_content' ? standards : null}
+              scanCounts={securityGrade(scanResult).counts ?? { critical: 0, warning: 0, info: 0 }}
+              scanFindings={scanResult?.findings ?? []}
+              judgments={judgments}
+              overrides={overrides}
+              humanInputs={humanInputs}
+              opinion={opinion}
+              reviewerName={reviewerName}
+            />
+            <div className="report-actions">
+              <button className="btn-primary" onClick={() => window.print()}>🖨️ 인쇄 / PDF 저장</button>
+              {supp.count > 0 && (
+                <button className="btn-secondary" onClick={() => copySupplement(supp.text)}>
+                  {suppCopied ? '✅ 복사됨 — 제작 교사에게 전달하세요' : `📨 보완 요청서 복사 (${supp.count}건)`}
+                </button>
+              )}
+              <button className="btn-secondary" onClick={saveRecord}>📚 심사 기록에 저장</button>
+              <button className="btn-secondary" onClick={() => setStep('judged')}>판정으로 돌아가기</button>
+            </div>
+            {supp.count > 0 && (
+              <details className="supp-box">
+                <summary>📨 보완 요청서 미리보기 — 판단 미완료 {supp.count}건을 제작 교사 안내문으로 자동 정리</summary>
+                <pre>{supp.text}</pre>
+              </details>
+            )}
           </div>
-        </div>
-      )}
+        )
+      })()}
     </section>
   )
 }

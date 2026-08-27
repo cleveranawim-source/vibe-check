@@ -3,6 +3,7 @@ import ReviewMode from './components/ReviewMode.jsx'
 import ReviewLedger from './components/ReviewLedger.jsx'
 import AboutPage from './components/AboutPage.jsx'
 import { RUBRIC_VERSION } from './data/rubric.js'
+import { linkReReview } from './lib/ledger.js'
 import DemoReport from './dev/DemoReport.jsx'
 
 // 구 이름(바이브체크) 시절 키 — 바꾸면 기존 심사 기록이 유실되므로 유지
@@ -60,7 +61,7 @@ export default function App() {
         <div style={view === 'review' ? undefined : { display: 'none' }}>
           <ReviewMode
             onSaveRecord={(record) => {
-              setLedger((prev) => [record, ...prev])
+              setLedger((prev) => [linkReReview(prev, record), ...prev])
               setView('ledger')
             }}
           />

@@ -36,6 +36,9 @@ localStorage(`edusafe-api-key`/`edusafe-model`)에 고정 저장, "저장된 키
 - `src/lib/reviewAi.js` — AI 호출·검증. **신뢰성 원칙이 코드로 강제됨**: 근거 인용 없는 pass/fail은 validateJudgments가 needs_human으로 강등, 누락 항목도 needs_human으로 채움
 - `src/lib/reviewSummary.js` — 판정 집계 (오버라이드>AI>수동, 판단불가 남으면 무조건 '보류')
 - `src/lib/github.js` — 저장소 로드. **트리·raw 조회는 커밋 SHA 기준** (해시 고정의 실질 — 브랜치명으로 되돌리지 말 것)
+- `src/lib/submissionGate.js` — 제출 완결성 사전 게이트 (Firebase 규칙·Supabase RLS 내보내기 안내 포함)
+- `src/lib/supplementRequest.js` — 판단불가 → 보완 요청서 자동 생성 (보고서 화면에서 복사)
+- `src/lib/ledger.js` — 재심사 회차 연결 (같은 앱 재심사 시 round·prevSha 기록)
 - `src/components/ReviewMode.jsx`(흐름) / `ReviewReport.jsx`(보고서) / `ReviewLedger.jsx`(심사 대장, localStorage `vibecheck-ledger-v1`)
 - App.jsx: ReviewMode는 탭 전환 시 언마운트하지 않는다(진행 중 심사 유실 방지)
 
@@ -43,7 +46,7 @@ localStorage(`edusafe-api-key`/`edusafe-model`)에 고정 저장, "저장된 키
 
 ```bash
 npm run dev      # localhost:5173
-npm test         # vitest 45개 — 수정 후 반드시 실행
+npm test         # vitest 52개 — 수정 후 반드시 실행
 npm run build && npm run deploy   # gh-pages 배포 (커밋·푸시도 함께 할 것)
 ```
 

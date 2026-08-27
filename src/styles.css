@@ -1702,3 +1702,45 @@ button {
   color: var(--danger);
   border-color: var(--danger);
 }
+
+/* 보완 요청서 / 재심사 회차 */
+.supp-box {
+  margin-top: 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+}
+
+.supp-box summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.supp-box pre {
+  margin-top: 12px;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.ledger-round {
+  margin-left: 6px;
+  background: var(--info-soft);
+  color: var(--info);
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+@media print {
+  .supp-box { display: none; }
+}
