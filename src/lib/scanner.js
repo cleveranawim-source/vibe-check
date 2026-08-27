@@ -1,6 +1,8 @@
 import rules, { projectRules } from '../data/securityRules.js'
 
-const TEXT_EXTENSIONS = /\.(html?|css|jsx?|tsx?|mjs|cjs|json|txt|md|vue|svelte|rules|env|yml|yaml|xml|py|csv|tsv)$/i
+const TEXT_EXTENSIONS = /\.(html?|css|jsx?|tsx?|mjs|cjs|json|jsonc|map|txt|md|mdx|vue|svelte|rules|env|yml|yaml|xml|svg|py|csv|tsv|toml|ini|conf|properties|lock|sql|sh|bash|zsh|go|rs|java|kt|kts|swift|php|rb|dart|scala|cs|fs|fsx|c|cc|cpp|cxx|h|hh|hpp|sol|lua|r|pl|pm|ex|exs|erl|hrl|clj|cljs|groovy|gradle|tf|hcl)$/i
+const TEXT_FILENAMES = /^(Dockerfile(?:\..+)?|Containerfile(?:\..+)?|Makefile|Procfile|Gemfile|Rakefile|Podfile|CMakeLists\.txt|LICENSE(?:\..+)?|NOTICE(?:\..+)?|AUTHORS(?:\..+)?|CODEOWNERS|\.gitmodules|\.gitignore|\.gitattributes|\.dockerignore|\.npmrc|\.yarnrc)$/i
+const APPLICATION_SOURCE_EXTENSIONS = /\.(html?|jsx?|tsx?|mjs|cjs|vue|svelte|py|go|rs|java|kt|kts|swift|php|rb|dart|scala|cs|fs|fsx|c|cc|cpp|cxx|h|hh|hpp|sol|lua|r|pl|pm|ex|exs|erl|hrl|clj|cljs|groovy)$/i
 const SKIP_PATH = /(^|\/)(node_modules|\.git|dist|build|\.next|coverage|vendor)(\/|$)/
 export const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 
@@ -8,14 +10,19 @@ export const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 export function isScannablePath(path) {
   if (SKIP_PATH.test(path)) return false
   const name = path.split('/').pop()
-  return TEXT_EXTENSIONS.test(name) || /^\.env/.test(name)
+  return TEXT_EXTENSIONS.test(name) || TEXT_FILENAMES.test(name) || /^\.env/.test(name)
+}
+
+export function isApplicationSourcePath(path) {
+  if (SKIP_PATH.test(path)) return false
+  return APPLICATION_SOURCE_EXTENSIONS.test(path.split('/').pop())
 }
 
 export function isScannableFile(file) {
   const path = file.webkitRelativePath || file.name
   if (SKIP_PATH.test(path)) return { ok: false, reason: '라이브러리/빌드 폴더' }
   if (file.size > MAX_FILE_SIZE) return { ok: false, reason: '2MB 초과' }
-  if (!TEXT_EXTENSIONS.test(file.name) && !/^\.env/.test(file.name)) {
+  if (!TEXT_EXTENSIONS.test(file.name) && !TEXT_FILENAMES.test(file.name) && !/^\.env/.test(file.name)) {
     return { ok: false, reason: '검사 대상 아닌 형식' }
   }
   return { ok: true }
@@ -61,11 +68,9 @@ export function scanFiles(files) {
 
     const lines = f.text.split('\n')
     for (const rule of rules) {
-      if (minified && !rule.scanMinified) continue
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i]
-        // 극단적으로 긴 줄(번들)은 비밀키 계열만 검사
-        if (line.length > 2000 && !rule.scanMinified) continue
+        // 인증 점수에는 압축·긴 줄도 포함한다. 건너뛰면 한 줄로 합치는 것만으로 규칙을 우회할 수 있다.
         // 규칙별 제외 조건 (예: Firebase 설정의 apiKey는 Google 키 노출 규칙에서 제외)
         if (rule.excludeLine && rule.excludeLine.test(line)) continue
         rule.pattern.lastIndex = 0
