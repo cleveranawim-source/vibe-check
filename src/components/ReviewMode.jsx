@@ -8,7 +8,7 @@ import { securityGrade } from '../lib/scoring.js'
 import { AI_MODELS, friendlyApiError } from '../lib/aiReview.js'
 import { TRACKS, rubricItems, RUBRIC_VERSION } from '../data/rubric.js'
 import { inferCategory, judgeRubric, VERDICT_LABELS } from '../lib/reviewAi.js'
-import { computeSummary } from '../lib/reviewSummary.js'
+import { computeSummary, finalVerdict } from '../lib/reviewSummary.js'
 import { SEVERITIES } from '../data/securityRules.js'
 import ReviewReport from './ReviewReport.jsx'
 
@@ -37,6 +37,14 @@ const saveStored = (key, value) => {
 const SUBJECTS = ['국어', '도덕', '사회', '역사', '수학', '과학', '기술·가정', '정보', '체육', '음악', '미술', '영어', '기타']
 const GRADE_BANDS = ['초1-2', '초3-4', '초5-6', '중1-3', '고1-3']
 const VERDICT_OPTIONS = ['pass', 'fail', 'na', 'needs_human']
+const STEP_LABELS = ['불러오기', '분류 확정', '판정 확인', '보고서']
+const STEP_INDEX = { setup: 0, loaded: 1, category: 1, judged: 2, report: 3 }
+const CHIP_DEFS = [
+  ['pass', '충족'],
+  ['fail', '미충족'],
+  ['needs_human', '판단불가'],
+  ['na', '해당없음'],
+]
 
 export default function ReviewMode({ onSaveRecord }) {
   const [step, setStep] = useState('setup') // setup | loaded | category | judged | report
@@ -87,6 +95,7 @@ export default function ReviewMode({ onSaveRecord }) {
   const [opinion, setOpinion] = useState('')
   const [reviewerName, setReviewerName] = useState('')
   const [suppCopied, setSuppCopied] = useState(false)
+  const [verdictFilter, setVerdictFilter] = useState(null)
 
   const copySupplement = async (text) => {
     try {
@@ -216,6 +225,17 @@ export default function ReviewMode({ onSaveRecord }) {
   const aiItems = trackItems.filter((it) => it.aiVerifiable)
   const humanItems = trackItems.filter((it) => !it.aiVerifiable)
 
+  // 판정 요약 칩: 현재 상태(오버라이드>AI>수동) 기준 집계 + 칩 클릭 시 해당 판정만 필터
+  const verdictOf = (it) => finalVerdict(it, judgments, overrides, humanInputs)
+  const verdictCounts = trackItems.reduce(
+    (acc, it) => {
+      acc[verdictOf(it)]++
+      return acc
+    },
+    { pass: 0, fail: 0, needs_human: 0, na: 0 }
+  )
+  const matchesFilter = (it) => !verdictFilter || verdictOf(it) === verdictFilter
+
   // 새 심사 시작 — 진행 중 판정이 있으면 확인
   const resetReview = () => {
     if (
@@ -239,6 +259,7 @@ export default function ReviewMode({ onSaveRecord }) {
     setHumanInputs({})
     setOpinion('')
     setError('')
+    setVerdictFilter(null)
   }
 
   const saveRecord = () => {
@@ -278,6 +299,19 @@ export default function ReviewMode({ onSaveRecord }) {
         초안을 만들고, <strong>최종 판정은 심사자가</strong> 합니다. AI 분석 단계에서 코드가 Anthropic 서버로
         전송됩니다. 심사 대상 코드는 신뢰할 수 없는 입력으로 취급하세요 — 근거 인용을 반드시 직접 확인하세요.
       </p>
+
+      <ol className="rm-stepper" aria-label="심사 진행 단계">
+        {STEP_LABELS.map((label, i) => {
+          const idx = STEP_INDEX[step]
+          const cls = i < idx ? 'done' : i === idx ? 'current' : ''
+          return (
+            <li key={label} className={cls}>
+              <span className="step-dot">{i < idx ? '✓' : i + 1}</span>
+              {label}
+            </li>
+          )
+        })}
+      </ol>
 
       {error && <div className="ai-error">⚠️ {error}</div>}
       {busy && (
@@ -428,8 +462,26 @@ export default function ReviewMode({ onSaveRecord }) {
           {excludedFiles.length > 0 && (
             <div className="ai-notice"><p>⚠️ 용량 초과로 분석에서 제외된 파일: {excludedFiles.join(', ')} — 판정의 한계로 보고서에 감안하세요.</p></div>
           )}
+          <div className="rm-chips" role="group" aria-label="판정 요약·필터">
+            {CHIP_DEFS.map(([v, label]) => (
+              <button
+                key={v}
+                className={`rm-chip chip-${v}${verdictFilter === v ? ' active' : ''}`}
+                onClick={() => setVerdictFilter(verdictFilter === v ? null : v)}
+                title={verdictFilter === v ? '필터 해제' : `${label} 항목만 보기`}
+              >
+                {label} {verdictCounts[v]}
+              </button>
+            ))}
+            {verdictFilter && (
+              <button className="rm-chip" onClick={() => setVerdictFilter(null)}>
+                전체 보기
+              </button>
+            )}
+          </div>
           <h3 className="rm-section-title">AI 판정 초안 — 항목별로 근거를 확인하고 승인하거나 번복하세요</h3>
-          {aiItems.map((it) => {
+          <p className="gh-hint">드롭다운을 그대로 두면 AI 판정을 승인한 것으로 기록됩니다. 판단불가·미충족 칩을 눌러 손댈 항목부터 확인하세요.</p>
+          {aiItems.filter(matchesFilter).map((it) => {
             const j = judgments[it.id]
             const ov = overrides[it.id]
             return (
@@ -461,7 +513,7 @@ export default function ReviewMode({ onSaveRecord }) {
           })}
 
           <h3 className="rm-section-title">심사자 수동 판정 — AI가 코드만으로 판단할 수 없는 항목</h3>
-          {humanItems.map((it) => {
+          {humanItems.filter(matchesFilter).map((it) => {
             const hi = humanInputs[it.id]
             return (
               <div key={it.id} className="rm-item rm-human">

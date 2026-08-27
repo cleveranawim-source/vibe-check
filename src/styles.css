@@ -1744,3 +1744,92 @@ button {
 @media print {
   .supp-box { display: none; }
 }
+
+/* 심사 스테퍼 */
+.rm-stepper {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.rm-stepper li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rm-stepper li:not(:last-child)::after {
+  content: '›';
+  margin-left: 6px;
+  color: var(--line);
+  font-weight: 700;
+}
+
+.rm-stepper .step-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: var(--paper);
+}
+
+.rm-stepper li.done {
+  color: var(--primary-deep);
+}
+
+.rm-stepper li.done .step-dot {
+  background: var(--primary-soft);
+  border-color: var(--primary-soft);
+  color: var(--primary-deep);
+}
+
+.rm-stepper li.current {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.rm-stepper li.current .step-dot {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* 판정 요약 칩 */
+.rm-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 0 6px;
+}
+
+.rm-chip {
+  border-radius: 99px;
+  padding: 5px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--muted);
+  transition: all 0.12s;
+}
+
+.rm-chip.chip-pass { color: var(--ok); }
+.rm-chip.chip-fail { color: var(--danger); }
+.rm-chip.chip-needs_human { color: var(--warn); }
+
+.rm-chip:hover { border-color: currentColor; }
+
+.rm-chip.active {
+  border: 2px solid currentColor;
+  padding: 4px 13px;
+}
