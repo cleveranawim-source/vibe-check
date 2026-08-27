@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
+    "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "sync:team": "git push team main:main"
   },
