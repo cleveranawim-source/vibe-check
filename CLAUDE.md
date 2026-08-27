@@ -44,6 +44,8 @@ npm run build && npm run deploy   # gh-pages 배포 (커밋·푸시도 함께 �
 ```
 
 - 배포: https://cleveranawim-source.github.io/vibe-check/ (base './', gh-pages=dist)
+- 팀 동기화: `npm run sync:team` → 팀 저장소(DevYonghunT/vibe-check)의 `edusafe-main` 브랜치로 푸시.
+  팀 저장소 `main`은 **공통 조상이 없는 별개 이력**(팀원의 Vercel·api/ 작업) — 절대 main에 강제 푸시하지 말 것
 - UI 작업: 주소 뒤 `#demo-report` 를 붙이면 AI 호출 없이 데모 보고서가 열림 (`src/dev/DemoReport.jsx`)
 
 ## 관례

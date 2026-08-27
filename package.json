@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "sync:team": "git push team main:edusafe-main"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
