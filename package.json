@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
     "deploy": "gh-pages -d dist",
-    "sync:team": "git push team main:edusafe-main"
+    "sync:team": "git push team main:main"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
