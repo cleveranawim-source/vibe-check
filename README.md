@@ -38,14 +38,14 @@
 ```bash
 npm install
 npm run dev      # localhost:5173
-npm test         # vitest 38개 (루브릭 무결성, AI 응답 검증, 판정 집계, 폴더 로드, 사전 게이트)
+npm test         # vitest 45개 (루브릭·규칙·AI 검증·집계·폴더 로드·사전 게이트)
 npm run build && npm run deploy   # gh-pages 배포
 ```
 
 ## 구조
 
 - `src/data/rubric.js` — 루브릭 v1.2 (버전 관리, 트랙 4종, 비전문가용 쉬운 설명)
-- `src/data/securityRules.js` — 규칙 스캔 30여 종 + 프로젝트 단위 규칙(App Check 부재 등)
+- `src/data/securityRules.js` — 규칙 스캔 40여 종 + 프로젝트 단위 규칙(App Check 부재 등)
 - `src/lib/reviewAi.js` — AI 호출(분류·판정) + 응답 검증·강등 규칙
 - `src/lib/reviewSummary.js` — 판정 집계 (오버라이드 우선순위, 종합 상태)
 - `src/lib/github.js` — 저장소 로드 (커밋 SHA 고정)

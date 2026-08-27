@@ -449,6 +449,78 @@ const rules = [
     fix: '배포 전에 디버깅용 alert를 제거하세요.',
     aiPrompt: '내 코드의 디버깅용 alert 호출을 전부 찾아 제거해줘.',
   },
+
+  // ───────────────────────── 루브릭 v1.2 연동 규칙 ─────────────────────────
+  {
+    id: 'jwt-hardcoded',
+    category: 'secret',
+    severity: 'critical',
+    scanMinified: true,
+    maskSecret: true,
+    title: 'JWT 토큰이 코드에 하드코딩됨',
+    pattern: /eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
+    explain: '로그인 상태를 증명하는 JWT 토큰이 코드에 그대로 들어 있어요. 개발 중 테스트하다 남는 경우가 많아요.',
+    risk: '이 토큰이 유효하다면 누구나 그 계정 행세를 할 수 있어요.',
+    fix: '토큰을 코드에서 제거하고, 서버에서 해당 세션을 만료시키세요.',
+    aiPrompt: '내 코드에 JWT 토큰이 하드코딩되어 있어. 제거하고, 로그인 후 발급받은 토큰을 안전하게 보관·사용하는 구조로 바꿔줘.',
+  },
+  {
+    id: 'webhook-url',
+    category: 'secret',
+    severity: 'critical',
+    scanMinified: true,
+    maskSecret: true,
+    title: 'Slack/Discord 웹훅 주소가 코드에 노출됨',
+    pattern: /hooks\.slack\.com\/services\/[A-Za-z0-9/]+|discord(?:app)?\.com\/api\/webhooks\/[0-9]+\/[A-Za-z0-9_-]+/g,
+    explain: '알림 발송용 웹훅 주소가 코드에 들어 있어요. 웹훅 주소는 그 자체가 비밀번호예요 — 주소만 알면 누구나 메시지를 보낼 수 있어요.',
+    risk: '타인이 우리 반 알림 채널에 아무 메시지나(스팸·피싱 포함) 보낼 수 있어요.',
+    fix: '해당 웹훅을 삭제하고 새로 만든 뒤, 서버(프록시)를 거쳐 호출하세요.',
+    aiPrompt: '내 코드에 Slack/Discord 웹훅 주소가 노출되어 있어. 웹훅을 숨긴 채 알림을 보낼 수 있는 무료 서버리스 프록시 구조로 바꿔줘.',
+  },
+  {
+    id: 'postmessage-wildcard',
+    category: 'xss',
+    severity: 'warning',
+    title: 'postMessage를 모든 출처(*)로 전송',
+    pattern: /postMessage\s*\([^)]*,\s*["']\*["']\s*\)/g,
+    explain: '창(iframe) 사이에 데이터를 보낼 때 받는 쪽을 확인하지 않고("*") 보내고 있어요.',
+    risk: '악성 페이지가 끼어들면 전송 중인 데이터를 가로챌 수 있어요.',
+    fix: 'postMessage의 두 번째 인자에 실제 대상 주소(origin)를 명시하세요.',
+    aiPrompt: '내 코드의 postMessage("*") 호출을 찾아 대상 origin을 명시하는 방식으로 바꿔줘.',
+  },
+  {
+    id: 'external-ai-endpoint',
+    category: 'privacy',
+    severity: 'info',
+    title: '외부 AI API 호출이 있음 — 학생 입력 전송 여부 확인 필요',
+    pattern: /api\.openai\.com|api\.anthropic\.com|generativelanguage\.googleapis\.com|api\.groq\.com|openrouter\.ai/gi,
+    explain: '외부 AI 서비스(ChatGPT·Claude·Gemini 등)를 호출하는 코드가 있어요. 학생이 입력한 글이 이 경로로 나간다면 고지와 "개인정보 입력 금지" 안내가 필요해요 (루브릭 R-llm-input).',
+    risk: '학생의 자유 입력에 이름·고민 등 개인정보가 섞여 해외 AI 서버로 전송될 수 있어요 — 처리위탁·국외이전 고지 대상입니다.',
+    fix: '학생 입력이 AI로 전송된다면 그 사실을 화면에 고지하고, 개인정보를 입력하지 말라는 안내를 추가하세요.',
+    aiPrompt: '내 앱이 학생 입력을 외부 AI API로 보내고 있어. 전송 사실 고지 문구와 "개인정보를 입력하지 마세요" 안내를 UI에 추가해줘.',
+  },
+  {
+    id: 'client-score-write',
+    category: 'db',
+    severity: 'info',
+    title: '점수류 값을 클라이언트가 DB에 직접 기록 — 위조 가능성 확인 필요',
+    pattern: /\.(?:set|update|add|push)\s*\(\s*\{[^}]{0,120}\b(?:score|points?|reward|cleared?|stage|level)\s*:/gi,
+    explain: '점수·완료·보상 같은 값을 브라우저가 계산해 그대로 저장하는 코드로 보여요. 경쟁·보상에 쓰이는 값이라면 학생이 개발자 도구로 조작할 수 있어요 (루브릭 R-score-forge).',
+    risk: '누구나 자기 점수를 마음대로 고쳐 1등이 될 수 있어요 — 경쟁 기능의 공정성이 무너집니다.',
+    fix: '점수는 서버(함수·RPC)가 계산해 기록하거나, 보안 규칙이 값의 범위·조건을 검증하게 하세요.',
+    aiPrompt: '내 앱이 클라이언트에서 계산한 점수를 DB에 그대로 저장하고 있어. 서버 검증 또는 보안 규칙 검증으로 위조를 막는 구조로 바꿔줘.',
+  },
+  {
+    id: 'answer-in-client',
+    category: 'etc',
+    severity: 'info',
+    title: '정답 데이터가 클라이언트에 포함된 것으로 보임',
+    pattern: /["'](?:answer|correctAnswer|correct|정답)["']\s*[:=]/g,
+    explain: '문항의 정답이 앱 파일(정적 JSON·번들)에 실려 오는 것으로 보여요. 평가·경쟁 목적이라면 학생이 F12로 정답지를 통째로 열람할 수 있어요 (루브릭 S-answer-exposure). 연습용으로 정답 공개가 무해한 설계라면 문제없습니다.',
+    risk: '평가·경쟁이 걸린 퀴즈라면 정답 유출로 공정성이 무너져요 — 퀴즈형 바이브 코딩 앱에서 가장 흔한 구멍입니다.',
+    fix: '평가용이라면 채점을 서버에서 하고 정답은 클라이언트로 내려보내지 마세요.',
+    aiPrompt: '내 퀴즈 앱의 정답이 클라이언트 데이터에 포함되어 있어. 정답을 숨기고 서버(또는 서버리스 함수)에서 채점하는 구조로 바꿔줘.',
+  },
 ]
 
 export default rules
@@ -483,6 +555,28 @@ export const projectRules = [
             })
             break
           }
+        }
+      }
+      return occurrences
+    },
+  },
+  {
+    id: 'student-data-file',
+    category: 'privacy',
+    severity: 'warning',
+    title: '학생 명단으로 보이는 데이터 파일이 저장소에 포함됨',
+    explain:
+      '이름·학번·연락처 같은 열이 있는 데이터 파일(csv 등)이 저장소에 들어 있는 것으로 보여요. 공개 저장소라면 누구나 내려받을 수 있어요 (루브릭 R-admin-data).',
+    risk: '학생 실명·연락처가 인터넷에 공개된 상태일 수 있어요 — 개인정보 유출 사고에 해당합니다.',
+    fix: '해당 파일을 저장소에서 제거하고(.gitignore 등록), git 기록에서도 지우세요. 이미 공개됐다면 유출로 간주하고 대응하세요.',
+    aiPrompt: '내 저장소에 학생 명단 데이터 파일이 커밋되어 있어. 저장소와 git 기록에서 완전히 제거하는 절차를 알려줘.',
+    check(files) {
+      const occurrences = []
+      for (const f of files) {
+        if (!/\.(csv|tsv|json)$/i.test(f.path)) continue
+        const head = f.text.slice(0, 2000)
+        if (/(이름|성명|학번)/.test(head) && /(전화|연락처|생년|주소|이메일)/.test(head)) {
+          occurrences.push({ file: f.path, line: 1, snippet: head.split('\n')[0].trim().slice(0, 160) })
         }
       }
       return occurrences

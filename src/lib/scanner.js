@@ -1,6 +1,6 @@
 import rules, { projectRules } from '../data/securityRules.js'
 
-const TEXT_EXTENSIONS = /\.(html?|css|jsx?|tsx?|mjs|cjs|json|txt|md|vue|svelte|rules|env|yml|yaml|xml|py)$/i
+const TEXT_EXTENSIONS = /\.(html?|css|jsx?|tsx?|mjs|cjs|json|txt|md|vue|svelte|rules|env|yml|yaml|xml|py|csv|tsv)$/i
 const SKIP_PATH = /(^|\/)(node_modules|\.git|dist|build|\.next|coverage|vendor)(\/|$)/
 export const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
 
