@@ -46,6 +46,20 @@ const CHIP_DEFS = [
   ['na', '해당없음'],
 ]
 
+const GRADE_COLORS = { danger: 'var(--danger)', caution: 'var(--warn)', good: 'var(--ok2)', safe: 'var(--ok)' }
+
+function ScanGauge({ score, grade }) {
+  const C = 2 * Math.PI * 20
+  return (
+    <svg className="scan-gauge" viewBox="0 0 48 48" role="img" aria-label={`자동 규칙 스캔 ${score}점`}>
+      <circle cx="24" cy="24" r="20" fill="none" stroke="var(--line)" strokeWidth="5" />
+      <circle cx="24" cy="24" r="20" fill="none" stroke={GRADE_COLORS[grade] || 'var(--muted)'} strokeWidth="5"
+        strokeDasharray={`${(score / 100) * C} ${C}`} strokeLinecap="round" transform="rotate(-90 24 24)" />
+      <text x="24" y="29" textAnchor="middle" className="scan-gauge-num">{score}</text>
+    </svg>
+  )
+}
+
 export default function ReviewMode({ onSaveRecord }) {
   const [step, setStep] = useState('setup') // setup | loaded | category | judged | report
   const [repoUrl, setRepoUrl] = useState('')
@@ -328,25 +342,31 @@ export default function ReviewMode({ onSaveRecord }) {
 
       {step === 'setup' && (
         <div className="rm-setup">
-          <label className="ai-label">심사 대상 GitHub 주소
-            <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !busy && repoUrl.trim()) loadRepo() }}
-              placeholder="https://github.com/아이디/저장소" disabled={!!busy} />
-          </label>
-          <button className="btn-primary" onClick={loadRepo} disabled={!!busy || !repoUrl.trim()}>
-            ① 저장소 불러오기 + 규칙 스캔
-          </button>
-          <div className="or-divider">또는</div>
-          <input ref={folderInputRef} type="file" webkitdirectory="" multiple style={{ display: 'none' }}
-            onChange={(e) => loadFolder(e.target.files)} />
-          <button className="btn-secondary" onClick={() => folderInputRef.current?.click()} disabled={!!busy}>
-            📁 프로젝트 폴더 업로드 + 규칙 스캔
-          </button>
-          <p className="gh-hint">
-            GitHub 주소는 공개 저장소만 가능하고, 비공개·미공개 프로젝트는 폴더 업로드를 사용하세요. 폴더
-            심사에는 커밋 해시 대신 파일 내용 전체의 SHA-256 지문이 기록됩니다. 심사자 API 키는 다음
-            단계(AI 분석)부터 사용됩니다.
-          </p>
+          <div className="rm-methods">
+            <div className="method-card">
+              <div className="method-icon">🌐</div>
+              <strong>GitHub 공개 저장소</strong>
+              <p>주소만 입력하면 불러와서 규칙을 스캔합니다.</p>
+              <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !busy && repoUrl.trim()) loadRepo() }}
+                placeholder="https://github.com/아이디/저장소" aria-label="심사 대상 GitHub 주소" disabled={!!busy} />
+              <button className="btn-primary" onClick={loadRepo} disabled={!!busy || !repoUrl.trim()}>
+                불러오기 + 규칙 스캔
+              </button>
+            </div>
+            <div className="method-card">
+              <div className="method-icon">📁</div>
+              <strong>프로젝트 폴더 업로드</strong>
+              <p>비공개·미공개 앱은 제출받은 폴더를 그대로 올려 심사합니다.</p>
+              <input ref={folderInputRef} type="file" webkitdirectory="" multiple style={{ display: 'none' }}
+                onChange={(e) => loadFolder(e.target.files)} />
+              <button className="btn-secondary" onClick={() => folderInputRef.current?.click()} disabled={!!busy}>
+                폴더 선택 + 규칙 스캔
+              </button>
+              <p className="method-note">커밋 해시 대신 파일 전체의 SHA-256 지문이 기록됩니다.</p>
+            </div>
+          </div>
+          <p className="gh-hint">심사자 API 키는 다음 단계(AI 분석)부터 사용됩니다.</p>
         </div>
       )}
 
@@ -371,21 +391,24 @@ export default function ReviewMode({ onSaveRecord }) {
             )}
           </div>
           <div className="rm-scan-box">
-            <strong>자동 규칙 스캔: {securityGrade(scanResult).score}점</strong>
-            {scanResult.findings.length === 0 ? (
-              <p className="rm-reasoning">등록된 패턴에서 발견된 문제 없음</p>
-            ) : (
-              <ul className="rm-scan-list">
-                {scanResult.findings.map((f) => (
-                  <li key={f.rule.id}>
-                    <span className="sev-badge" style={{ background: SEVERITIES[f.rule.severity].color }}>
-                      {SEVERITIES[f.rule.severity].label}
-                    </span>{' '}
-                    {f.rule.title} ({f.occurrences.length}곳)
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ScanGauge score={securityGrade(scanResult).score} grade={securityGrade(scanResult).grade} />
+            <div className="rm-scan-main">
+              <strong>자동 규칙 스캔</strong>
+              {scanResult.findings.length === 0 ? (
+                <p className="rm-reasoning">등록된 패턴에서 발견된 문제 없음</p>
+              ) : (
+                <ul className="rm-scan-list">
+                  {scanResult.findings.map((f) => (
+                    <li key={f.rule.id}>
+                      <span className="sev-badge" style={{ background: SEVERITIES[f.rule.severity].color }}>
+                        {SEVERITIES[f.rule.severity].label}
+                      </span>{' '}
+                      {f.rule.title} ({f.occurrences.length}곳)
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
           <label className="ai-label">심사자 Anthropic API 키
             <input type="password" value={apiKey} onChange={(e) => updateApiKey(e.target.value)}
@@ -494,9 +517,17 @@ export default function ReviewMode({ onSaveRecord }) {
                   </span>
                 </div>
                 <p className="rm-plain">💡 {it.plain}</p>
-                {j?.evidence?.map((e, i) => (
+                {j?.evidence?.slice(0, 1).map((e, i) => (
                   <div key={i} className="rr-evidence"><span>{e.file}:{e.line}</span> <code>{e.quote}</code></div>
                 ))}
+                {j?.evidence?.length > 1 && (
+                  <details className="rm-more-ev">
+                    <summary>근거 {j.evidence.length - 1}개 더 보기</summary>
+                    {j.evidence.slice(1).map((e, i) => (
+                      <div key={i} className="rr-evidence"><span>{e.file}:{e.line}</span> <code>{e.quote}</code></div>
+                    ))}
+                  </details>
+                )}
                 {j?.reasoning && <p className="rm-reasoning">{j.reasoning}</p>}
                 <div className="rm-override-row">
                   <select value={ov?.verdict || ''} onChange={(e) => setOverride(it.id, e.target.value || null)}>

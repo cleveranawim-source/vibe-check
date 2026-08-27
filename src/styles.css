@@ -1833,3 +1833,93 @@ button {
   border: 2px solid currentColor;
   padding: 4px 13px;
 }
+
+/* 첫 화면 2카드 (UI 3단계) */
+.rm-methods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+}
+
+.method-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.method-card .method-icon {
+  font-size: 1.6rem;
+}
+
+.method-card > strong {
+  font-size: 1.02rem;
+}
+
+.method-card p {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.method-card input[type='text'] {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.method-card .method-note {
+  font-size: 0.76rem;
+  margin-top: auto;
+}
+
+/* 판정 카드 상태 색 (UI 2단계) */
+.rm-item {
+  border-left-width: 4px;
+  border-left-color: var(--line);
+}
+
+.rm-item.rm-v-pass { border-left-color: var(--ok); }
+.rm-item.rm-v-fail { border-left-color: var(--danger); }
+.rm-item.rm-v-needs_human { border-left-color: var(--warn); }
+.rm-item.rm-v-na { border-left-color: var(--muted); }
+.rm-item.rm-human { border-left-color: var(--info); }
+
+.rm-more-ev {
+  margin: 4px 0;
+}
+
+.rm-more-ev summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* 스캔 게이지 */
+.rm-scan-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.scan-gauge {
+  width: 62px;
+  height: 62px;
+  flex-shrink: 0;
+}
+
+.scan-gauge-num {
+  font-size: 15px;
+  font-weight: 800;
+  fill: var(--ink);
+}
+
+.rm-scan-main {
+  flex: 1;
+  min-width: 0;
+}
