@@ -49,7 +49,7 @@ export default function BlockchainBadge({
       })
       setResult(response)
     } catch (err) {
-      setError(err.message || '블록체인 인증 발급에 실패했습니다.')
+      setError(err.message || '가스리스 서명 인증 발급에 실패했습니다.')
     } finally {
       setBusy(false)
     }
@@ -71,10 +71,10 @@ export default function BlockchainBadge({
     <section className={`cert-box blockchain-cert ${eligibility.eligible ? 'eligible' : 'ineligible'}`}>
       <div className="blockchain-cert-head">
         <div>
-          <strong>⛓️ 점수 연동 블록체인 인증마크</strong>
+          <strong>🔏 점수 연동 가스리스 EAS 인증마크</strong>
           <p className="gh-hint">
             서버가 다시 계산한 자동 보안·개인정보 점수가 {BADGE_POLICY.minimumScanScore}점 이상이고
-            치명적 발견이 없을 때 Base Sepolia EAS 인증을 발급합니다.
+            치명적 발견이 없을 때 Ethereum 지갑으로 EAS 오프체인 인증에 서명합니다. 가스비는 0원입니다.
           </p>
         </div>
         <span className={`badge-eligibility ${eligibility.eligible ? 'pass' : 'fail'}`}>
@@ -107,12 +107,12 @@ export default function BlockchainBadge({
             value={issuanceToken}
             onChange={(event) => setIssuanceToken(event.target.value)}
             placeholder="과제용 심사자 발급 승인 코드"
-            aria-label="과제용 블록체인 인증 발급 승인 코드"
+            aria-label="과제용 가스리스 인증 발급 승인 코드"
             autoComplete="off"
             disabled={busy}
           />
           <button className="btn-primary" type="submit" disabled={busy || issuanceToken.length < 32}>
-            {busy ? 'Base Sepolia 발급 중…' : '조건 확인 후 자동 발급'}
+            {busy ? '서명 발급 중…' : '조건 확인 후 무료 발급'}
           </button>
         </form>
       )}
@@ -123,11 +123,7 @@ export default function BlockchainBadge({
 
       {result && !result.uid && result.status !== 'not_eligible' && (
         <p className="badge-config-note">
-          {result.status === 'submission_unknown'
-            ? '트랜잭션 제출 여부를 확인 중입니다. 중복 발급을 막기 위해 자동 재전송하지 않습니다.'
-            : result.status === 'failed'
-              ? '발급 시도가 실패했습니다. 서버 설정과 테스트넷 잔액을 확인한 뒤 다시 시도해 주세요.'
-              : '같은 커밋의 발급 작업이 이미 진행 중입니다. 잠시 후 다시 확인해 주세요.'}
+          서명 인증을 저장하지 못했습니다. 서버 설정을 확인한 뒤 다시 시도해 주세요.
         </p>
       )}
 
@@ -142,13 +138,12 @@ export default function BlockchainBadge({
         const links = buildBadgeLinks(result.uid)
         return (
           <div className="blockchain-issued" role="status">
-            <img src={links.badgeUrl} alt={`EduSafe ${result.badgeLevel} 블록체인 인증마크`} height="24" />
+            <img src={links.badgeUrl} alt={`EduSafe ${result.badgeLevel} EAS 오프체인 인증마크`} height="24" />
             <div>
-              <strong>Base Sepolia 발급 완료</strong>
+              <strong>EAS 오프체인 서명 발급 완료 · 가스비 0원</strong>
               <code>{result.uid}</code>
               <div className="cert-links">
-                <a href={links.verifyUrl} target="_blank" rel="noopener noreferrer">온체인 검증</a>
-                <a href={result.explorerUrl} target="_blank" rel="noopener noreferrer">EAS Explorer</a>
+                <a href={links.verifyUrl} target="_blank" rel="noopener noreferrer">서명 검증</a>
                 <button type="button" className="btn-secondary" onClick={copySnippet}>
                   {copied ? '✅ 복사됨' : 'README 삽입 코드 복사'}
                 </button>
@@ -160,7 +155,8 @@ export default function BlockchainBadge({
 
       {error && <p className="ai-error" role="alert">⚠️ {error}</p>}
       <p className="gh-hint">
-        이 마크는 표시된 커밋의 자동 규칙 점검 결과이며 수동 심사 완료, 서비스 전체의 무결점 또는 법적 인증을 보장하지 않습니다.
+        이 마크는 블록체인에 기록되지 않습니다. EAS/EIP-712 형식의 지갑 서명으로 발급자와 위변조 여부를
+        검증하며, 표시된 커밋의 자동 규칙 점검 결과일 뿐 수동 심사 완료·무결점·법적 인증을 보장하지 않습니다.
       </p>
     </section>
   )

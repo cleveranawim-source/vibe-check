@@ -41,7 +41,7 @@ localStorage(`edusafe-api-key`/`edusafe-model`)에 고정 저장, "저장된 키
 - `src/lib/ledger.js` — 재심사 회차 연결 (같은 앱 재심사 시 round·prevSha 기록)
 - `src/lib/certification.js` — 예전 공개 대장 배지의 호환용 유틸리티(현재 UI에서는 미사용)
 - `src/lib/badgePolicy.js` / `server/badges/` — 서버 자동 규칙 점수 정책, exact-SHA 재검사, PostgreSQL 멱등성,
-  Base Sepolia EAS 발급·온체인 검증. 브라우저 점수나 서버 개인키 노출 금지
+  가스비 없는 EAS offchain v2(EIP-712) 서명·검증. 브라우저 점수나 서버 개인키 노출 금지
 - `src/components/ReviewMode.jsx`(흐름) / `ReviewReport.jsx`(보고서) / `ReviewLedger.jsx`(심사 대장, localStorage `vibecheck-ledger-v1`)
 - App.jsx: ReviewMode는 탭 전환 시 언마운트하지 않는다(진행 중 심사 유실 방지)
 

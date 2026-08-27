@@ -80,8 +80,7 @@ export async function handleBadgeHttp(request, { service, config }) {
         throw new BadgeError(415, 'json_required', '발급 요청은 application/json이어야 합니다.')
       }
       const result = await service.issue(await readJson(request))
-      const status = ['submitting', 'submitted', 'submission_unknown'].includes(result.status) ? 202 : 200
-      return json(result, status, { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' })
+      return json(result, 200, { 'Access-Control-Allow-Origin': origin, Vary: 'Origin' })
     }
     if (request.method === 'GET') {
       const uid = url.searchParams.get('uid') || ''
@@ -91,7 +90,7 @@ export async function handleBadgeHttp(request, { service, config }) {
           status: 200,
           headers: {
             'Content-Type': 'image/svg+xml; charset=utf-8',
-            'Cache-Control': 'public, max-age=60',
+            'Cache-Control': 'no-store',
             'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; sandbox",
             'X-Content-Type-Options': 'nosniff',
             'X-Badge-Status': result.status,

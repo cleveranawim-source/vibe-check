@@ -37,7 +37,7 @@ export default {
       return await handleBadgeHttp(request, getDependencies(requireIssuer))
     } catch {
       return Response.json(
-        { error: { code: 'badge_server_misconfigured', message: '블록체인 인증 서버 설정을 확인해 주세요.' } },
+        { error: { code: 'badge_server_misconfigured', message: '가스리스 서명 인증 서버 설정을 확인해 주세요.' } },
         { status: 503, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } },
       )
     }

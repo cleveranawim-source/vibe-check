@@ -6,7 +6,6 @@ import { SECURITY_RULESET_VERSION } from '../../src/data/securityRules.js'
 import {
   BASE_SEPOLIA_CHAIN_ID,
   BASE_SEPOLIA_EAS_ADDRESS,
-  BASE_SEPOLIA_EASSCAN_URL,
   EAS_BADGE_SCHEMA_UID,
 } from './constants.js'
 import { BadgeError } from './errors.js'
@@ -15,6 +14,7 @@ import { sha256Hex } from './hashing.js'
 const COMMIT_SHA = /^[0-9a-f]{40}$/i
 const BYTES32 = /^0x[0-9a-f]{64}$/i
 const GITHUB_NAME = /^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,98}[A-Za-z0-9])?$/
+const ISSUE_INPUT_KEYS = new Set(['repositoryUrl', 'commitSha'])
 
 export function parseIssueInput(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -22,6 +22,10 @@ export function parseIssueInput(value) {
   }
   if ('score' in value || 'summary' in value || 'scanScore' in value || 'reviewScore' in value || 'decisions' in value) {
     throw new BadgeError(422, 'client_score_rejected', '클라이언트가 보낸 점수는 발급에 사용할 수 없습니다.')
+  }
+  const unexpectedKeys = Object.keys(value).filter((key) => !ISSUE_INPUT_KEYS.has(key))
+  if (unexpectedKeys.length > 0) {
+    throw new BadgeError(422, 'unexpected_badge_field', '저장소 주소와 commit SHA 외의 발급 데이터는 서버가 직접 계산합니다.')
   }
   let url
   try {
@@ -63,11 +67,17 @@ export async function loadAndScanRepository(input) {
   return { result, scanResult, scanGrade: securityGrade(scanResult) }
 }
 
+function isoFromSeconds(value) {
+  return BigInt(value || 0) === 0n ? null : new Date(Number(value) * 1000).toISOString()
+}
+
 function publicRecord(record) {
   return {
-    status: record.state,
+    status: record.revokedAt ? 'revoked' : 'issued',
+    credentialType: 'eas-offchain-v2',
+    onchain: false,
+    gasFee: '0',
     uid: record.uid,
-    txHash: record.txHash,
     subjectKey: record.subjectKey,
     repositoryUrl: record.repositoryUrl,
     commitSha: record.commitSha,
@@ -80,8 +90,20 @@ function publicRecord(record) {
     chainId: Number(record.chainId),
     schemaUid: record.schemaUid,
     attesterAddress: record.attesterAddress,
-    expiresAt: record.expiresAt,
-    explorerUrl: record.uid ? `${BASE_SEPOLIA_EASSCAN_URL}/attestation/view/${record.uid}` : null,
+    signature: record.signature,
+    issuedAt: isoFromSeconds(record.signedAt),
+    expiresAt: isoFromSeconds(record.expirationTime),
+    revokedAt: record.revokedAt,
+  }
+}
+
+function assertCurrentSnapshot(record, snapshot) {
+  const fields = [
+    'repositoryId', 'repositoryUrl', 'commitSha', 'score', 'badgeLevel', 'reportHash',
+    'policyHash', 'policyVersion', 'rulesetVersion', 'chainId', 'easAddress', 'schemaUid',
+  ]
+  if (fields.some((field) => String(record[field]).toLowerCase() !== String(snapshot[field]).toLowerCase())) {
+    throw new BadgeError(409, 'badge_snapshot_conflict', '같은 저장소·커밋·정책의 기존 인증 결과가 현재 재검사 결과와 다릅니다.')
   }
 }
 
@@ -139,19 +161,19 @@ export class BadgeService {
     })
     const policyHash = sha256Hex(BADGE_POLICY)
     const subjectKey = sha256Hex({
-      namespace: 'edusafe-eas-badge-v1',
+      namespace: 'edusafe-eas-offchain-badge-v2',
       chainId: this.chainId.toString(),
       easAddress: this.easAddress,
       schemaUid: this.schemaUid,
-      attesterAddress: this.attesterAddress,
       repositoryId: result.repositoryId,
       commitSha: input.commitSha,
       rulesetVersion: SECURITY_RULESET_VERSION,
       policyHash,
     })
-    const expiresAt = BADGE_POLICY.expirationDays > 0
-      ? new Date(this.now() + BADGE_POLICY.expirationDays * 24 * 60 * 60 * 1000).toISOString()
-      : null
+    const signedAt = String(Math.floor(this.now() / 1000))
+    const expirationTime = BADGE_POLICY.expirationDays > 0
+      ? String(BigInt(signedAt) + BigInt(BADGE_POLICY.expirationDays * 24 * 60 * 60))
+      : '0'
     const snapshot = {
       subjectKey,
       repositoryId: result.repositoryId,
@@ -168,75 +190,37 @@ export class BadgeService {
       easAddress: this.easAddress,
       schemaUid: this.schemaUid,
       attesterAddress: this.attesterAddress,
-      expiresAt,
+      signedAt,
+      expirationTime,
     }
-    const reserveAndSubmit = async (repository = this.repository) => {
-      const reservation = await repository.reserve(snapshot)
-      if (reservation.action === 'existing') {
-        let existing = reservation.record
-        if (existing.uid) {
-          const verified = await this.verify(existing.uid, repository)
-          return {
-            ...verified,
-            status: verified.active ? 'issued' : verified.status,
-            eligibility,
-            reused: true,
-          }
-        }
-        if (existing.txHash && ['submitted', 'submission_unknown'].includes(existing.state)) {
-          const reconciled = await this.easGateway.reconcile(existing.txHash)
-          if (reconciled.status === 'confirmed') {
-            existing = await repository.markConfirmed(existing.id, reconciled)
-          } else if (reconciled.status === 'failed') {
-            existing = await repository.markFailure(existing.id, {
-              code: 'eas_transaction_reverted',
-              ambiguous: false,
-              txHash: reconciled.txHash,
-            })
-          }
-        }
-        return { ...publicRecord(existing), eligibility, reused: true }
-      }
 
-      let txHash = null
-      try {
-        const persistedSnapshot = {
-          ...reservation.record,
-          badgeLevelCode: BADGE_LEVELS[reservation.record.badgeLevel].code,
-        }
-        const issued = await this.easGateway.issue(persistedSnapshot, {
-          onBroadcast: async (hash) => {
-            txHash = hash
-            await repository.markSubmitted(reservation.record.id, hash)
-          },
-        })
-        const confirmed = await repository.markConfirmed(reservation.record.id, issued)
-        return { ...publicRecord(confirmed), eligibility, reused: false }
-      } catch (error) {
-        await repository.markFailure(reservation.record.id, {
-          code: error?.code === 'INSUFFICIENT_FUNDS' ? 'insufficient_testnet_funds' : 'eas_submission_failed',
-          ambiguous: Boolean(txHash),
-          txHash,
-        })
-        if (error instanceof BadgeError) throw error
-        throw new BadgeError(502, 'eas_submission_failed', 'Base Sepolia 인증 발급에 실패했습니다. 잠시 후 상태를 다시 확인해 주세요.')
-      }
+    const existing = await this.repository.findBySubjectKey(subjectKey)
+    if (existing) {
+      assertCurrentSnapshot(existing, snapshot)
+      const verified = this.verifyRecord(existing)
+      return { ...verified, status: verified.active ? 'issued' : verified.status, eligibility, reused: true }
     }
-    return this.repository.withIssuanceLock
-      ? this.repository.withIssuanceLock(reserveAndSubmit)
-      : reserveAndSubmit(this.repository)
+
+    try {
+      const proof = await this.easGateway.issue(snapshot)
+      const saved = await this.repository.saveIssued(snapshot, proof)
+      const verified = this.verifyRecord(saved.record)
+      return {
+        ...verified,
+        status: verified.active ? 'issued' : verified.status,
+        eligibility,
+        reused: saved.action === 'existing',
+      }
+    } catch (error) {
+      if (error instanceof BadgeError) throw error
+      throw new BadgeError(502, 'offchain_signature_failed', '가스리스 EAS 서명 인증 발급에 실패했습니다.')
+    }
   }
 
-  async verify(uid, repository = this.repository) {
-    if (!BYTES32.test(uid || '')) throw new BadgeError(422, 'invalid_attestation_uid', '인증 UID 형식이 올바르지 않습니다.')
-    const record = await repository.findByUid(uid)
-    if (!record) throw new BadgeError(404, 'badge_not_found', '등록된 인증마크를 찾을 수 없습니다.')
-    const chain = await this.easGateway.verify(uid, this.now(), {
-      schemaUid: record.schemaUid,
-      attesterAddress: record.attesterAddress,
-    })
-    const data = chain.data
-    const matchesSnapshot = (
+  verifyRecord(record) {
+    const cryptographic = this.easGateway.verify(record, this.now())
+    const data = cryptographic.data
+    const matchesSnapshot = Boolean(data) && (
       String(data.subjectKey).toLowerCase() === record.subjectKey.toLowerCase()
       && String(data.repositoryId) === String(record.repositoryId)
       && String(data.repositoryUrl) === record.repositoryUrl
@@ -245,19 +229,28 @@ export class BadgeService {
       && Number(data.score) === record.score
       && Number(data.badgeLevel) === BADGE_LEVELS[record.badgeLevel]?.code
       && String(data.policyHash).toLowerCase() === record.policyHash.toLowerCase()
+      && String(data.policyVersion) === record.policyVersion
       && String(data.rulesetVersion) === record.rulesetVersion
-      && String(chain.schema).toLowerCase() === record.schemaUid.toLowerCase()
-      && String(chain.attester).toLowerCase() === record.attesterAddress.toLowerCase()
     )
+    const active = cryptographic.active && matchesSnapshot && !record.revokedAt
     return {
       ...publicRecord(record),
-      status: chain.active && matchesSnapshot ? 'valid' : chain.revoked ? 'revoked' : chain.expired ? 'expired' : 'invalid',
-      active: chain.active && matchesSnapshot,
+      status: active ? 'valid' : record.revokedAt ? 'revoked' : cryptographic.expired ? 'expired' : 'invalid',
+      active,
       matchesSnapshot,
-      issuedAt: chain.issuedAt,
-      chainId: Number(record.chainId),
-      schema: chain.schema,
-      attester: chain.attester,
+      signatureValid: cryptographic.signatureValid,
+      uidMatches: cryptographic.uidMatches,
+      trustedDomain: cryptographic.trustedDomain,
+      trustedAttester: cryptographic.trustedAttester,
+      recoveredAttester: cryptographic.recoveredAttester,
+      proof: cryptographic.proof,
     }
+  }
+
+  async verify(uid) {
+    if (!BYTES32.test(uid || '')) throw new BadgeError(422, 'invalid_attestation_uid', '인증 UID 형식이 올바르지 않습니다.')
+    const record = await this.repository.findByUid(uid)
+    if (!record) throw new BadgeError(404, 'badge_not_found', '등록된 인증마크를 찾을 수 없습니다.')
+    return this.verifyRecord(record)
   }
 }

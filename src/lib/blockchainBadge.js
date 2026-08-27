@@ -29,7 +29,7 @@ export async function issueBlockchainBadge({ payload, issuanceToken, fetchImpl =
   if (!response.ok) {
     throw new BlockchainBadgeApiError(
       body?.error?.code || 'badge_request_failed',
-      body?.error?.message || '블록체인 인증 요청에 실패했습니다.',
+      body?.error?.message || '가스리스 서명 인증 요청에 실패했습니다.',
       response.status,
       body?.error?.details,
     )

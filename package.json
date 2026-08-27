@@ -12,7 +12,6 @@
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
     "db:migrate:badges": "node --env-file-if-exists=.env.local scripts/migrate-badges.mjs",
-    "eas:register-schema": "node --env-file-if-exists=.env.local scripts/register-eas-schema.mjs",
     "deploy": "gh-pages -d dist",
     "sync:team": "git push team main:main"
   },

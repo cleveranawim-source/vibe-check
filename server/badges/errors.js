@@ -10,5 +10,5 @@ export class BadgeError extends Error {
 
 export function asBadgeError(error) {
   if (error instanceof BadgeError) return error
-  return new BadgeError(500, 'internal_error', '블록체인 인증 처리 중 오류가 발생했습니다.')
+  return new BadgeError(500, 'internal_error', '서명 인증 처리 중 오류가 발생했습니다.')
 }

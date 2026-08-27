@@ -1,4 +1,4 @@
-import { getAddress, isHexString } from 'ethers'
+import { Wallet, getAddress, isHexString } from 'ethers'
 
 import {
   BASE_SEPOLIA_CHAIN_ID,
@@ -73,8 +73,7 @@ export function parseBadgeConfig(env = process.env, { requireIssuer = true } = {
     throw new BadgeError(503, 'badge_server_misconfigured', '운영 DATABASE_URL에는 sslmode=require 또는 verify-full이 필요합니다.')
   }
 
-  const rpcUrl = parseUrl(required(env, 'EAS_RPC_URL'), 'EAS_RPC_URL', { allowLocalHttp }).toString()
-  const schemaUid = required(env, 'EAS_SCHEMA_UID')
+  const schemaUid = (env.EAS_SCHEMA_UID || EAS_BADGE_SCHEMA_UID).trim()
   if (!isHexString(schemaUid, 32) || schemaUid.toLowerCase() === ZERO_BYTES32) {
     throw new BadgeError(503, 'badge_server_misconfigured', 'EAS_SCHEMA_UID는 bytes32 형식이어야 합니다.')
   }
@@ -94,6 +93,32 @@ export function parseBadgeConfig(env = process.env, { requireIssuer = true } = {
   if (requireIssuer && (!PRIVATE_KEY.test(privateKey) || BigInt(privateKey) === 0n)) {
     throw new BadgeError(503, 'badge_server_misconfigured', 'EAS_ATTESTER_PRIVATE_KEY 형식이 올바르지 않습니다.')
   }
+  if (requireIssuer) {
+    let derivedAddress
+    try {
+      derivedAddress = getAddress(new Wallet(privateKey).address)
+    } catch {
+      throw new BadgeError(503, 'badge_server_misconfigured', 'EAS_ATTESTER_PRIVATE_KEY 형식이 올바르지 않습니다.')
+    }
+    if (derivedAddress !== attesterAddress) {
+      throw new BadgeError(503, 'badge_server_misconfigured', 'EAS_ATTESTER_PRIVATE_KEY와 EAS_ATTESTER_ADDRESS가 일치하지 않습니다.')
+    }
+  }
+
+  const trustedAttesterAddresses = Object.freeze([
+    ...new Set((env.EAS_TRUSTED_ATTESTER_ADDRESSES || attesterAddress)
+      .split(',')
+      .map((address) => {
+        try {
+          return getAddress(address.trim())
+        } catch {
+          throw new BadgeError(503, 'badge_server_misconfigured', 'EAS_TRUSTED_ATTESTER_ADDRESSES가 올바르지 않습니다.')
+        }
+      })),
+  ])
+  if (!trustedAttesterAddresses.includes(attesterAddress)) {
+    throw new BadgeError(503, 'badge_server_misconfigured', '현재 EAS 발급자 주소가 신뢰 목록에 없습니다.')
+  }
 
   const allowedOrigins = requireIssuer
     ? Object.freeze(parseOrigins(required(env, 'BADGE_ALLOWED_ORIGINS'), allowLocalHttp))
@@ -106,12 +131,11 @@ export function parseBadgeConfig(env = process.env, { requireIssuer = true } = {
     allowedOrigins,
     issuanceToken,
     chainId,
-    rpcUrl,
     easAddress: BASE_SEPOLIA_EAS_ADDRESS,
     schemaUid: schemaUid.toLowerCase(),
     attesterAddress,
+    trustedAttesterAddresses,
     privateKey: requireIssuer ? privateKey : null,
     issuerEnabled: requireIssuer,
-    confirmations: 1,
   })
 }
