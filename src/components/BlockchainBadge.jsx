@@ -16,22 +16,36 @@ export default function BlockchainBadge({
   scanGrade,
 }) {
   if (repoMeta.demoOnly === true && repoMeta.source === 'demo') {
-    return <DemoBlockchainBadge scanGrade={scanGrade} />
+    return <DemoBlockchainBadge repoMeta={repoMeta} scanGrade={scanGrade} />
   }
 
   return <SignedBlockchainBadge repoUrl={repoUrl} repoMeta={repoMeta} scanGrade={scanGrade} />
 }
 
-function DemoBlockchainBadge({ scanGrade }) {
-  const score = scanGrade?.score ?? 100
+function DemoBlockchainBadge({ repoMeta, scanGrade }) {
+  const score = scanGrade?.score
+  const level = score >= BADGE_POLICY.levels.gold.minimumScore
+    ? 'Gold'
+    : score >= BADGE_POLICY.levels.silver.minimumScore ? 'Silver' : null
+
+  if (!level) {
+    return (
+      <section className="cert-box blockchain-cert ineligible" aria-label="블록체인 인증마크 데모 오류">
+        <strong>🧪 데모 점수를 확인하지 못했습니다</strong>
+        <p className="gh-hint">실제 인증이나 발급 요청은 실행되지 않았습니다.</p>
+      </section>
+    )
+  }
+
+  const levelClass = level.toLowerCase()
 
   return (
     <section className="cert-box blockchain-cert eligible" aria-label="블록체인 인증마크 데모">
       <div className="blockchain-cert-head">
         <div>
-          <strong>🧪 100점 연동 인증마크 화면 데모</strong>
+          <strong>🧪 {score}점 연동 인증마크 화면 데모</strong>
           <p className="gh-hint">
-            <code>DEMO100</code> 전용 로컬 미리보기입니다. 서버 재검사·지갑 서명·DB 저장은 실행하지 않습니다.
+            <code>{repoMeta.repo}</code> 전용 로컬 미리보기입니다. 서버 재검사·지갑 서명·DB 저장은 실행하지 않습니다.
           </p>
         </div>
         <span className="badge-eligibility pass">DEMO · 실제 인증 아님</span>
@@ -39,17 +53,17 @@ function DemoBlockchainBadge({ scanGrade }) {
 
       <div className="badge-score-row">
         <span>자동 보안 <strong>{score}점</strong></span>
-        <span>미리보기 등급 <strong>Gold</strong></span>
+        <span>미리보기 등급 <strong>{level}</strong></span>
       </div>
 
       <div className="blockchain-issued demo-issued" role="status">
-        <div className="demo-badge-art" role="img" aria-label={`EduSafe Gold ${score}점 데모 마크`}>
-          <span>EduSafe Gold</span>
+        <div className={`demo-badge-art ${levelClass}`} role="img" aria-label={`EduSafe ${level} ${score}점 데모 마크`}>
+          <span>EduSafe {level}</span>
           <span>{score}점 · DEMO</span>
         </div>
         <div>
-          <strong>Gold 인증마크 미리보기</strong>
-          <code>DEMO-ONLY · 실제 EAS UID 없음</code>
+          <strong>{level} 인증마크 미리보기</strong>
+          <code>{repoMeta.commitSha} · 실제 EAS UID 없음</code>
           <p className="gh-hint">
             실제 인증 아님 · 발급 API, 서명, DB 기록, 공개 검증 링크를 만들지 않습니다.
           </p>

@@ -12,7 +12,12 @@ import { computeSummary, finalVerdict } from '../lib/reviewSummary.js'
 import { SEVERITIES } from '../data/securityRules.js'
 import ReviewReport from './ReviewReport.jsx'
 import BlockchainBadge from './BlockchainBadge.jsx'
-import { BADGE_DEMO_TRIGGER, createBadgeDemoRepository, isBadgeDemoTrigger } from '../lib/badgeDemo.js'
+import {
+  BADGE_DEMO_TRIGGER,
+  SILVER_BADGE_DEMO_TRIGGER,
+  createBadgeDemoRepository,
+  isBadgeDemoTrigger,
+} from '../lib/badgeDemo.js'
 
 const metaTitle = (m) => (m.owner ? `${m.owner}/${m.repo}` : m.repo)
 const shaWord = (m) => (m.demoOnly ? '데모 ID' : m.source === 'local' ? '지문' : '커밋')
@@ -134,7 +139,7 @@ export default function ReviewMode({ onSaveRecord }) {
   // ① 저장소 로드 + 규칙 스캔 — API 키 없이 가능 (선별·사전 확인 단계)
   const loadRepo = async () => {
     if (isBadgeDemoTrigger(repoUrl)) {
-      const demo = createBadgeDemoRepository()
+      const demo = createBadgeDemoRepository(repoUrl)
       const demoFiles = [...demo.files]
       setError('')
       setRepoMeta(demo.repoMeta)
@@ -394,7 +399,8 @@ export default function ReviewMode({ onSaveRecord }) {
                 불러오기 + 규칙 스캔
               </button>
               <p className="method-note">
-                빠른 시연: 주소 대신 <code>{BADGE_DEMO_TRIGGER}</code>을 입력하면 100점·Gold 인증마크 데모가 열립니다.
+                빠른 시연: <code>{BADGE_DEMO_TRIGGER}</code>은 100점·Gold,
+                {' '}<code>{SILVER_BADGE_DEMO_TRIGGER}</code>은 80점·Silver 마크를 보여줍니다.
               </p>
             </div>
             <div className="method-card">
@@ -460,7 +466,9 @@ export default function ReviewMode({ onSaveRecord }) {
           </div>
           {repoMeta.demoOnly ? (
             <p className="badge-config-note">
-              데모는 100점과 Gold 인증마크의 표시만 체험합니다. AI 분석·실제 인증 발급은 실행하지 않습니다.
+              데모는 {securityGrade(scanResult).score}점과
+              {' '}{repoMeta.demoLevel === 'gold' ? 'Gold' : 'Silver'} 인증마크의 표시만 체험합니다.
+              AI 분석·실제 인증 발급은 실행하지 않습니다.
             </p>
           ) : (
             <>

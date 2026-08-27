@@ -142,6 +142,7 @@ describe('badge service', () => {
     expect(() => parseIssueInput({ ...INPUT, repositoryUrl: 'https://github.com:444/example/app' })).toThrowError(/github\.com/)
     expect(() => parseIssueInput({ ...INPUT, repositoryUrl: 'https://github.com/example/app/tree/main' })).toThrowError(/루트/)
     expect(() => parseIssueInput({ repositoryUrl: 'DEMO100', commitSha: 'DEMO-ONLY' })).toThrowError(/GitHub 저장소 주소/)
+    expect(() => parseIssueInput({ repositoryUrl: 'DEMO80', commitSha: 'DEMO80-ONLY' })).toThrowError(/GitHub 저장소 주소/)
     expect(() => parseIssueInput({ ...INPUT, demoOnly: true })).toThrowError(/서버가 직접 계산/)
   })
 

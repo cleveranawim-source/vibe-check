@@ -2061,6 +2061,15 @@ button {
   color: #5d4308;
 }
 
+.demo-badge-art.silver span:first-child {
+  background: #46606a;
+}
+
+.demo-badge-art.silver span:last-child {
+  background: #edf4f6;
+  color: #243c45;
+}
+
 .blockchain-issued code {
   display: block;
   margin-top: 4px;
