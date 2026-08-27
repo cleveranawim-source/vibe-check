@@ -55,7 +55,11 @@ export function parseBadgeConfig(env = process.env, { requireIssuer = true } = {
     throw new BadgeError(503, 'badge_server_misconfigured', '과제용 발급 네트워크는 Base Sepolia(84532)만 허용합니다.')
   }
 
-  const databaseUrl = required(env, 'DATABASE_URL')
+  const databaseUrl = (
+    env.BADGE_DATABASE_URL?.trim()
+    || env.DATABASE_URL_UNPOOLED?.trim()
+    || required(env, 'DATABASE_URL')
+  )
   let database
   try {
     database = new URL(databaseUrl)

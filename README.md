@@ -76,7 +76,7 @@ GitHub Pages와 Vercel API를 분리 배포할 때 필요한 값은 다음처럼
 |---|---|---|
 | 프론트엔드 빌드 | `VITE_BLOCKCHAIN_BADGES_ENABLED` | `true` |
 | 프론트엔드 빌드 | `VITE_BLOCKCHAIN_BADGE_API_URL` | `https://<Vercel 도메인>/api/badges` |
-| Vercel 서버 | `DATABASE_URL` | 운영 PostgreSQL TLS 접속 문자열(`sslmode=require`) |
+| Vercel 서버 | `DATABASE_URL_UNPOOLED` | advisory lock용 PostgreSQL direct 접속 문자열(`sslmode=require`). 없으면 `DATABASE_URL` 사용 |
 | Vercel 서버 | `BADGE_ALLOWED_ORIGINS` | GitHub Pages의 origin, 예: `https://cleveranawim-source.github.io` |
 | Vercel 서버 | `BADGE_ISSUANCE_TOKEN` | 32자 이상의 임의 승인 코드 |
 | Vercel 서버 | `EAS_RPC_URL` | Base Sepolia HTTPS RPC |

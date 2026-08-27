@@ -20,6 +20,14 @@ describe('badge config', () => {
     })
   })
 
+  it('advisory lock을 위해 unpooled PostgreSQL 주소를 우선 사용한다', () => {
+    const config = parseBadgeConfig({
+      ...base,
+      DATABASE_URL_UNPOOLED: 'postgresql://postgres:postgres@localhost:5432/edusafe_direct',
+    }, { requireIssuer: false })
+    expect(config.databaseUrl).toContain('/edusafe_direct')
+  })
+
   it('발급 설정은 승인 토큰과 개인키를 요구한다', () => {
     expect(() => parseBadgeConfig(base)).toThrowError(/EAS_ATTESTER_PRIVATE_KEY/)
     expect(parseBadgeConfig({
