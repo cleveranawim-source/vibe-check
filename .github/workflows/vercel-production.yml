@@ -1,0 +1,66 @@
+name: Keep Vercel production in sync
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vercel-production-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # Vercel already deploys commits authored by the team owner. For other
+    # contributors, create a no-content-change marker commit owned by the
+    # Vercel team owner after the exact main revision passes verification.
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.author.email != 'devyongt@gmail.com'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Verify production build
+        run: npm run build
+
+      - name: Check that this is still the latest main commit
+        id: freshness
+        shell: bash
+        run: |
+          git fetch origin main
+          latest_sha="$(git rev-parse origin/main)"
+          if [[ "$latest_sha" == "$GITHUB_SHA" ]]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "A newer main commit exists; its workflow run will handle deployment."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Add Vercel deployment sync marker
+        if: steps.freshness.outputs.current == 'true'
+        shell: bash
+        run: |
+          git config user.name "Dev_YongT"
+          git config user.email "devyongt@gmail.com"
+          git commit --allow-empty -m "chore(deploy): sync Vercel production for ${GITHUB_SHA}"
+          git push origin HEAD:main
