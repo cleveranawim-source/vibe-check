@@ -56,6 +56,13 @@ Attestation Service(EAS) offchain v2 형식으로 인증마크에 서명합니�
 심사자가 발급을 요청하면 서버가 동일 SHA를 재검사한 뒤 조건 통과 시에만 서명합니다. 로컬 폴더
 심사는 서버가 원본을 독립 확인할 수 없어 자동 발급 대상이 아닙니다.
 
+### 100점 화면 데모
+
+앱 심사의 **GitHub 공개 저장소** 입력란에 `DEMO100`을 정확히 입력하고
+`불러오기 + 규칙 스캔`을 누르면 100점과 Gold 인증마크 화면을 바로 볼 수 있습니다.
+이 경로는 화면 발표를 위한 로컬 fixture이며 GitHub·발급 API·서명키·DB를 호출하지 않습니다.
+표시되는 마크는 `DEMO · 실제 인증 아님`이고 EAS UID나 공개 검증 링크도 생성하지 않습니다.
+
 ```bash
 cp .env.example .env.local
 npm run db:migrate:badges

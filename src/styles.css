@@ -2032,6 +2032,35 @@ button {
   max-width: 100%;
 }
 
+.demo-issued {
+  border-style: dashed;
+}
+
+.demo-badge-art {
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 8%);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 26px;
+  white-space: nowrap;
+}
+
+.demo-badge-art span:first-child {
+  padding: 0 10px;
+  background: #8a6410;
+  color: #fff;
+}
+
+.demo-badge-art span:last-child {
+  padding: 0 10px;
+  background: #fff4c2;
+  color: #5d4308;
+}
+
 .blockchain-issued code {
   display: block;
   margin-top: 4px;

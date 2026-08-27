@@ -12,9 +12,10 @@ import { computeSummary, finalVerdict } from '../lib/reviewSummary.js'
 import { SEVERITIES } from '../data/securityRules.js'
 import ReviewReport from './ReviewReport.jsx'
 import BlockchainBadge from './BlockchainBadge.jsx'
+import { BADGE_DEMO_TRIGGER, createBadgeDemoRepository, isBadgeDemoTrigger } from '../lib/badgeDemo.js'
 
 const metaTitle = (m) => (m.owner ? `${m.owner}/${m.repo}` : m.repo)
-const shaWord = (m) => (m.source === 'local' ? '지문' : '커밋')
+const shaWord = (m) => (m.demoOnly ? '데모 ID' : m.source === 'local' ? '지문' : '커밋')
 
 // 심사자 API 키·모델은 이 브라우저(localStorage)에만 저장 — 코드·저장소에 넣으면 R-secrets 위반
 const KEY_STORAGE = 'edusafe-api-key'
@@ -132,6 +133,23 @@ export default function ReviewMode({ onSaveRecord }) {
 
   // ① 저장소 로드 + 규칙 스캔 — API 키 없이 가능 (선별·사전 확인 단계)
   const loadRepo = async () => {
+    if (isBadgeDemoTrigger(repoUrl)) {
+      const demo = createBadgeDemoRepository()
+      const demoFiles = [...demo.files]
+      setError('')
+      setRepoMeta(demo.repoMeta)
+      setFiles(demoFiles)
+      setScanResult(scanFiles(demoFiles))
+      setGate(checkSubmission(demoFiles, {
+        source: 'demo',
+        skippedCount: demo.skippedCount,
+        truncated: demo.truncated,
+      }).map((item) => item.id === 'pinned'
+        ? { ...item, label: '데모 데이터', detail: '화면 시연용 고정 fixture — 실제 제출물 아님' }
+        : item))
+      setStep('loaded')
+      return
+    }
     const parsed = parseGithubUrl(repoUrl)
     if (!parsed) return setError('주소 형식을 알 수 없어요. 예: https://github.com/아이디/저장소')
     setError('')
@@ -354,7 +372,7 @@ export default function ReviewMode({ onSaveRecord }) {
         </div>
       )}
 
-      {repoMeta?.source === 'github' && scanResult && (
+      {(repoMeta?.source === 'github' || repoMeta?.demoOnly) && scanResult && (
         <BlockchainBadge
           repoUrl={repoUrl}
           repoMeta={repoMeta}
@@ -375,6 +393,9 @@ export default function ReviewMode({ onSaveRecord }) {
               <button className="btn-primary" onClick={loadRepo} disabled={!!busy || !repoUrl.trim()}>
                 불러오기 + 규칙 스캔
               </button>
+              <p className="method-note">
+                빠른 시연: 주소 대신 <code>{BADGE_DEMO_TRIGGER}</code>을 입력하면 100점·Gold 인증마크 데모가 열립니다.
+              </p>
             </div>
             <div className="method-card">
               <div className="method-icon">📁</div>
@@ -417,7 +438,11 @@ export default function ReviewMode({ onSaveRecord }) {
             <div className="rm-scan-main">
               <strong>자동 규칙 스캔</strong>
               {scanResult.findings.length === 0 ? (
-                <p className="rm-reasoning">등록된 패턴에서 발견된 문제 없음</p>
+                <p className="rm-reasoning">
+                  {repoMeta.demoOnly
+                    ? '시연용 fixture에서 고정된 100점 예시 결과'
+                    : '등록된 패턴에서 발견된 문제 없음'}
+                </p>
               ) : (
                 <ul className="rm-scan-list">
                   {scanResult.findings.map((f) => (
@@ -433,26 +458,34 @@ export default function ReviewMode({ onSaveRecord }) {
               )}
             </div>
           </div>
-          <label className="ai-label">심사자 Anthropic API 키
-            <input type="password" value={apiKey} onChange={(e) => updateApiKey(e.target.value)}
-              placeholder="sk-ant-..." autoComplete="off" disabled={!!busy} />
-          </label>
-          <p className="gh-hint">
-            키는 이 브라우저에만 저장되어 다음 심사에 자동으로 채워집니다 (코드·서버에는 저장되지 않음).
-            {apiKey && (
-              <button type="button" className="key-clear" onClick={() => updateApiKey('')} disabled={!!busy}>
-                저장된 키 지우기
+          {repoMeta.demoOnly ? (
+            <p className="badge-config-note">
+              데모는 100점과 Gold 인증마크의 표시만 체험합니다. AI 분석·실제 인증 발급은 실행하지 않습니다.
+            </p>
+          ) : (
+            <>
+              <label className="ai-label">심사자 Anthropic API 키
+                <input type="password" value={apiKey} onChange={(e) => updateApiKey(e.target.value)}
+                  placeholder="sk-ant-..." autoComplete="off" disabled={!!busy} />
+              </label>
+              <p className="gh-hint">
+                키는 이 브라우저에만 저장되어 다음 심사에 자동으로 채워집니다 (코드·서버에는 저장되지 않음).
+                {apiKey && (
+                  <button type="button" className="key-clear" onClick={() => updateApiKey('')} disabled={!!busy}>
+                    저장된 키 지우기
+                  </button>
+                )}
+              </p>
+              <label className="ai-label">모델
+                <select value={model} onChange={(e) => updateModel(e.target.value)} disabled={!!busy}>
+                  {AI_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
+                </select>
+              </label>
+              <button className="btn-primary" onClick={classify} disabled={!!busy || !apiKey.trim()}>
+                ② AI 분류 추론
               </button>
-            )}
-          </p>
-          <label className="ai-label">모델
-            <select value={model} onChange={(e) => updateModel(e.target.value)} disabled={!!busy}>
-              {AI_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
-            </select>
-          </label>
-          <button className="btn-primary" onClick={classify} disabled={!!busy || !apiKey.trim()}>
-            ② AI 분류 추론
-          </button>
+            </>
+          )}
         </div>
       )}
 

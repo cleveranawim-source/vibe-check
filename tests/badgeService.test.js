@@ -141,6 +141,8 @@ describe('badge service', () => {
   it('GitHub 저장소 루트 HTTPS 주소만 허용한다', () => {
     expect(() => parseIssueInput({ ...INPUT, repositoryUrl: 'https://github.com:444/example/app' })).toThrowError(/github\.com/)
     expect(() => parseIssueInput({ ...INPUT, repositoryUrl: 'https://github.com/example/app/tree/main' })).toThrowError(/루트/)
+    expect(() => parseIssueInput({ repositoryUrl: 'DEMO100', commitSha: 'DEMO-ONLY' })).toThrowError(/GitHub 저장소 주소/)
+    expect(() => parseIssueInput({ ...INPUT, demoOnly: true })).toThrowError(/서버가 직접 계산/)
   })
 
   it('서버 재계산 결과가 통과하면 가스 없이 서명하고 발급 결과를 저장한다', async () => {
