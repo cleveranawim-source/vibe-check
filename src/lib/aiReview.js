@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export const AI_MODELS = [
   { id: 'claude-opus-5', label: 'Claude Opus 5 — 가장 정밀 (기본)', note: '$5/$25 per 1M tokens' },
+  { id: 'claude-fable-5', label: 'Claude Fable 5 — 최고 성능 (Opus의 2배 비용)', note: '$10/$50 per 1M tokens' },
   { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 — 균형형', note: '$3/$15 per 1M tokens' },
   { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 — 절약형', note: '$1/$5 per 1M tokens' },
 ]

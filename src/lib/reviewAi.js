@@ -99,7 +99,9 @@ async function callJson({ apiKey, model, system, user, onText }) {
     })
     if (onText) stream.on('text', onText)
     const final = await stream.finalMessage()
-    if (final.stop_reason === 'refusal') throw new Error('모델이 이 요청의 처리를 거절했어요.')
+    if (final.stop_reason === 'refusal') {
+      throw new Error('모델이 안전상 이유로 이 요청의 처리를 거절했어요. 다른 모델(Opus 5 등)로 다시 시도해 보세요.')
+    }
     if (final.stop_reason === 'max_tokens') {
       throw new Error('응답이 길이 제한으로 잘렸어요. 파일 수를 줄여 다시 시도해 주세요.')
     }

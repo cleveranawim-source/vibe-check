@@ -14,6 +14,25 @@ import ReviewReport from './ReviewReport.jsx'
 const metaTitle = (m) => (m.owner ? `${m.owner}/${m.repo}` : m.repo)
 const shaWord = (m) => (m.source === 'local' ? '지문' : '커밋')
 
+// 심사자 API 키·모델은 이 브라우저(localStorage)에만 저장 — 코드·저장소에 넣으면 R-secrets 위반
+const KEY_STORAGE = 'edusafe-api-key'
+const MODEL_STORAGE = 'edusafe-model'
+const loadStored = (key, fallback) => {
+  try {
+    return localStorage.getItem(key) || fallback
+  } catch {
+    return fallback
+  }
+}
+const saveStored = (key, value) => {
+  try {
+    if (value) localStorage.setItem(key, value)
+    else localStorage.removeItem(key)
+  } catch {
+    // 저장 불가 환경(시크릿 모드 등)에서는 세션 동안만 유지
+  }
+}
+
 const SUBJECTS = ['국어', '도덕', '사회', '역사', '수학', '과학', '기술·가정', '정보', '체육', '음악', '미술', '영어', '기타']
 const GRADE_BANDS = ['초1-2', '초3-4', '초5-6', '중1-3', '고1-3']
 const VERDICT_OPTIONS = ['pass', 'fail', 'na', 'needs_human']
@@ -21,8 +40,19 @@ const VERDICT_OPTIONS = ['pass', 'fail', 'na', 'needs_human']
 export default function ReviewMode({ onSaveRecord }) {
   const [step, setStep] = useState('setup') // setup | loaded | category | judged | report
   const [repoUrl, setRepoUrl] = useState('')
-  const [apiKey, setApiKey] = useState('')
-  const [model, setModel] = useState(AI_MODELS[0].id)
+  const [apiKey, setApiKey] = useState(() => loadStored(KEY_STORAGE, ''))
+  const [model, setModel] = useState(() => {
+    const saved = loadStored(MODEL_STORAGE, AI_MODELS[0].id)
+    return AI_MODELS.some((m) => m.id === saved) ? saved : AI_MODELS[0].id
+  })
+  const updateApiKey = (v) => {
+    setApiKey(v)
+    saveStored(KEY_STORAGE, v)
+  }
+  const updateModel = (v) => {
+    setModel(v)
+    saveStored(MODEL_STORAGE, v)
+  }
   const [busy, setBusy] = useState('')
   const [busyDetail, setBusyDetail] = useState('')
   const [elapsed, setElapsed] = useState(0)
@@ -310,12 +340,20 @@ export default function ReviewMode({ onSaveRecord }) {
               </ul>
             )}
           </div>
-          <label className="ai-label">심사자 Anthropic API 키 (저장되지 않음)
-            <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}
+          <label className="ai-label">심사자 Anthropic API 키
+            <input type="password" value={apiKey} onChange={(e) => updateApiKey(e.target.value)}
               placeholder="sk-ant-..." autoComplete="off" disabled={!!busy} />
           </label>
+          <p className="gh-hint">
+            키는 이 브라우저에만 저장되어 다음 심사에 자동으로 채워집니다 (코드·서버에는 저장되지 않음).
+            {apiKey && (
+              <button type="button" className="key-clear" onClick={() => updateApiKey('')} disabled={!!busy}>
+                저장된 키 지우기
+              </button>
+            )}
+          </p>
           <label className="ai-label">모델
-            <select value={model} onChange={(e) => setModel(e.target.value)} disabled={!!busy}>
+            <select value={model} onChange={(e) => updateModel(e.target.value)} disabled={!!busy}>
               {AI_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
             </select>
           </label>

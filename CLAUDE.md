@@ -25,7 +25,11 @@ SHA-256 콘텐츠 지문을 기록 (`src/lib/localFolder.js`). 루브릭 v1.1: �
 ## 아키텍처
 
 React 18 + Vite 6 정적 앱. AI는 심사자의 API 키로 브라우저에서 직접 호출
-(@anthropic-ai/sdk, dangerouslyAllowBrowser, 기본 모델 claude-opus-5, 스트리밍).
+(@anthropic-ai/sdk, dangerouslyAllowBrowser, 기본 모델 claude-opus-5, 스트리밍.
+claude-fable-5 옵션 있음 — refusal은 callJson이 처리). 심사자 키·모델 선택은
+localStorage(`edusafe-api-key`/`edusafe-model`)에 고정 저장, "저장된 키 지우기"로 변경.
+**키를 코드·저장소에 하드코딩하는 것은 절대 금지** — 공개 배포 앱이라 즉시 유출이며
+자체 루브릭 R-secrets 위반.
 
 - `src/data/rubric.js` — 루브릭 v1.2 (버전 관리 필수. 트랙 4종: admin/subject_tool/learning_content/class_ops, 필수 10+점수 15+수동 6)
 - `src/data/securityRules.js` — 규칙 스캔 30여 종 + projectRules(프로젝트 단위: App Check 부재 등)
