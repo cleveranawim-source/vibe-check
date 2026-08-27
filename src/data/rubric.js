@@ -1,8 +1,10 @@
 // 심사 루브릭 — 판정의 재현성을 위해 버전 관리한다.
 // v1.1 (2026-08-27): plain(비전문가용 쉬운 설명) 추가 — 항목·판정 로직은 v1.0과 동일
+// v1.2 (2026-08-27): 팀원 제안(docs/제안-루브릭-v1.2.md, 실측 사고 기반) 중 우선순위 채택 —
+//   클라이언트 위조 2건·LLM 입력 고지(필수), 정답 비노출(점수), 학생 단위 삭제(수동)
 // type: 'required'(하나라도 미충족이면 불합격 후보) | 'scored'(가중 점수)
 // aiVerifiable: true → AI가 코드에서 판정 초안 작성 / false → 심사자 수동 판정
-export const RUBRIC_VERSION = '1.1'
+export const RUBRIC_VERSION = '1.2'
 
 export const TRACKS = {
   admin: { label: '교무·행정 자동화', icon: '🗂️', desc: '성적·출결·명단·문서 처리 등 교사 업무용 도구 (학생이 사용자가 아님)' },
@@ -44,6 +46,18 @@ export const rubricItems = [
     question: '학생 데이터 파일(명단·성적 csv/xlsx 등)이 저장소·배포물에 포함되어 있지 않다',
     plain: '앱을 만들다가 학생 명단·성적 파일을 코드와 함께 인터넷에 올려버리는 실수를 찾습니다. 저장소가 공개면 누구나 내려받을 수 있어요.',
     evidenceHint: '이름·학번·연락처 열이 있는 데이터 파일' },
+  { id: 'R-score-forge', tracks: ALL, type: 'required', weight: 3, aiVerifiable: true,
+    question: '점수·완료·보상 등 경쟁/보상에 쓰이는 값을 클라이언트가 임의로 쓸 수 없다 (경쟁·보상 기능이 없으면 해당없음)',
+    plain: '점수를 학생 기기가 계산해 그대로 저장하는 구조면, 개발자 도구 몇 번으로 아무나 1등이 될 수 있어요. 성적표는 학생이 쓰는 게 아니라 서버가 써야 합니다.',
+    evidenceHint: 'score·point·clear류 필드의 클라이언트 write, 보안 규칙의 값 검증, 서버 함수·RPC 계산' },
+  { id: 'R-impersonate', tracks: STUDENT_FACING, type: 'required', weight: 3, aiVerifiable: true,
+    question: '학생 A가 학생 B의 기록을 덮어쓰기·삭제·사칭할 수 없다',
+    plain: '남의 일기장을 읽는 것만큼, 남의 이름으로 쓰는 것도 막아야 합니다. 저장 주소의 학생 ID를 마음대로 지정할 수 있으면 친구 기록을 지우거나 사칭할 수 있어요.',
+    evidenceHint: '쓰기 경로의 학생 ID 지정 방식, 보안 규칙의 본인 제한(auth.uid 매칭 등)' },
+  { id: 'R-llm-input', tracks: STUDENT_FACING, type: 'required', weight: 3, aiVerifiable: true,
+    question: '학생의 자유 입력이 LLM 등 외부 API로 전송된다면 그 사실을 고지하고 "개인정보를 입력하지 말라"는 안내가 있다 (그런 기능이 없으면 해당없음)',
+    plain: '학생이 쓴 글이 외부 AI 회사 서버로 나간다면, 그 사실을 알리고 이름·연락처 같은 개인정보를 쓰지 말라는 안내가 있어야 합니다. 교육청 생성형 AI 지침의 핵심 요구예요.',
+    evidenceHint: 'api.openai.com·api.anthropic.com·generativelanguage 등 외부 AI 호출부, 고지·안내 문구' },
 
   // ───── 점수 요건 (aiVerifiable) ─────
   { id: 'S-minimal', tracks: ALL, type: 'scored', weight: 3, aiVerifiable: true,
@@ -98,6 +112,10 @@ export const rubricItems = [
     question: '운영자·문의처 안내가 앱에 있다',
     plain: '문제가 생겼을 때 "누구에게 말하면 되는지"가 앱에 적혀 있는지 봅니다.',
     evidenceHint: '하단·정보 화면의 운영자 표기' },
+  { id: 'S-answer-exposure', tracks: STUDENT_FACING, type: 'scored', weight: 3, aiVerifiable: true,
+    question: '평가·경쟁 목적 문항의 정답·채점 기준이 클라이언트(번들·정적 JSON·네트워크 응답)에 내려오지 않는다 (정답 공개가 무해한 연습용 설계면 해당없음)',
+    plain: '정답이 앱 파일에 실려 오면 학생이 개발자 도구(F12)로 정답지를 통째로 열람할 수 있습니다. 퀴즈형 바이브 코딩 앱에서 가장 흔한 구멍이에요.',
+    evidenceHint: '정적 JSON·번들의 answer·correct류 필드, 채점 로직의 실행 위치' },
 
   // ───── 심사자 수동 판정 (aiVerifiable: false) ─────
   { id: 'H-edu-fit', tracks: ['learning_content'], type: 'scored', weight: 3, aiVerifiable: false,
@@ -116,6 +134,10 @@ export const rubricItems = [
     question: '활동 종료 후 데이터 파기 계획이 확인된다',
     plain: '모은 데이터를 언제 지울지 계획이 있는지 봅니다. 개인정보는 쓰임이 끝나면 지우는 것이 법의 원칙이에요.',
     evidenceHint: '운영 계획 문서·심사 시 문답' },
+  { id: 'H-delete', tracks: ALL, type: 'scored', weight: 3, aiVerifiable: false,
+    question: '특정 학생 1명의 데이터를 지울 수단이 있고, 삭제 시 진행도·기록·랭킹 등 파생 데이터도 함께 지워진다',
+    plain: '보호자가 "우리 아이 기록을 지워 달라"고 요구하면 실제로 지울 수 있어야 합니다(파기 요구권). 본 기록만 지우고 랭킹에 이름이 남으면 지운 게 아니에요.',
+    evidenceHint: '삭제 기능·문서화된 절차, 파생 데이터(진행도·랭킹) 목록 대조' },
   { id: 'H-2fa', tracks: ALL, type: 'scored', weight: 1, aiVerifiable: false,
     question: '운영 계정(GitHub·클라우드)에 2단계 인증이 켜져 있다',
     plain: '앱을 관리하는 계정이 뚫리면 앱 전체가 뚫립니다. 비밀번호 외에 휴대폰 확인을 한 번 더 거치는 2단계 잠금이 켜져 있는지 봅니다.',

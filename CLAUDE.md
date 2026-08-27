@@ -13,7 +13,10 @@
 2026-08-27 갱신: **심사자 전용 도구로 확정** (설계 문서의 "모의심사 공개" 방침 폐기).
 GitHub 공개 저장소 외에 **프로젝트 폴더 업로드 심사** 지원 — 커밋 SHA 대신 파일 전체의
 SHA-256 콘텐츠 지문을 기록 (`src/lib/localFolder.js`). 루브릭 v1.1: 모든 항목에
-`plain`(비전문가용 쉬운 설명) 추가, 판정 화면·보고서에 표시.
+`plain`(비전문가용 쉬운 설명) 추가, 판정 화면·보고서에 표시. v1.2: 팀원 실측 제안
+(`docs/제안-루브릭-v1.2.md`) 중 우선순위 채택 — 클라이언트 위조·사칭·LLM 입력 고지(필수 3),
+정답 비노출(점수), 학생 단위 삭제(수동) + 제출 완결성 사전 게이트(`src/lib/submissionGate.js`).
+나머지 제안(실명 비노출, 학년도 전환 등)은 파일럿 후 2차 반영 예정.
 
 설계 합의와 결정 이력: `docs/superpowers/specs/2026-08-24-review-mode-design.md`
 구현 계획 + 독립 리뷰 반영 기록: `docs/superpowers/plans/2026-08-24-review-mode.md`
@@ -24,7 +27,7 @@ SHA-256 콘텐츠 지문을 기록 (`src/lib/localFolder.js`). 루브릭 v1.1: �
 React 18 + Vite 6 정적 앱. AI는 심사자의 API 키로 브라우저에서 직접 호출
 (@anthropic-ai/sdk, dangerouslyAllowBrowser, 기본 모델 claude-opus-5, 스트리밍).
 
-- `src/data/rubric.js` — 루브릭 v1.0 (버전 관리 필수. 트랙 4종: admin/subject_tool/learning_content/class_ops, 필수 7+점수 14+수동 5)
+- `src/data/rubric.js` — 루브릭 v1.2 (버전 관리 필수. 트랙 4종: admin/subject_tool/learning_content/class_ops, 필수 10+점수 15+수동 6)
 - `src/data/securityRules.js` — 규칙 스캔 30여 종 + projectRules(프로젝트 단위: App Check 부재 등)
 - `src/lib/reviewAi.js` — AI 호출·검증. **신뢰성 원칙이 코드로 강제됨**: 근거 인용 없는 pass/fail은 validateJudgments가 needs_human으로 강등, 누락 항목도 needs_human으로 채움
 - `src/lib/reviewSummary.js` — 판정 집계 (오버라이드>AI>수동, 판단불가 남으면 무조건 '보류')
@@ -36,7 +39,7 @@ React 18 + Vite 6 정적 앱. AI는 심사자의 API 키로 브라우저에서 �
 
 ```bash
 npm run dev      # localhost:5173
-npm test         # vitest 34개 — 수정 후 반드시 실행
+npm test         # vitest 38개 — 수정 후 반드시 실행
 npm run build && npm run deploy   # gh-pages 배포 (커밋·푸시도 함께 할 것)
 ```
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { parseGithubUrl, fetchRepoFiles } from '../lib/github.js'
 import { readLocalFolder } from '../lib/localFolder.js'
+import { checkSubmission } from '../lib/submissionGate.js'
 import { scanFiles } from '../lib/scanner.js'
 import { securityGrade } from '../lib/scoring.js'
 import { AI_MODELS, friendlyApiError } from '../lib/aiReview.js'
@@ -44,6 +45,7 @@ export default function ReviewMode({ onSaveRecord }) {
   const folderInputRef = useRef(null)
   const [files, setFiles] = useState([])
   const [scanResult, setScanResult] = useState(null)
+  const [gate, setGate] = useState([])
   const [aiCategory, setAiCategory] = useState(null)
   const [track, setTrack] = useState(null)
   const [standards, setStandards] = useState({ subject: '', gradeBand: '', codes: '' })
@@ -73,6 +75,7 @@ export default function ReviewMode({ onSaveRecord }) {
       setRepoMeta({ source: 'github', owner: parsed.owner, repo: parsed.repo, branch: result.branch, commitSha: result.commitSha })
       setFiles(result.files)
       setScanResult(scanFiles(result.files))
+      setGate(checkSubmission(result.files, { source: 'github', skippedCount: result.skippedCount, truncated: result.truncated }))
       setStep('loaded')
     } catch (err) {
       setError(friendlyApiError(err))
@@ -92,6 +95,7 @@ export default function ReviewMode({ onSaveRecord }) {
       setRepoMeta({ source: 'local', owner: null, repo: result.folderName, branch: '로컬 업로드', commitSha: result.contentSha })
       setFiles(result.files)
       setScanResult(scanFiles(result.files))
+      setGate(checkSubmission(result.files, { source: 'local', skippedCount: result.skippedCount }))
       setStep('loaded')
     } catch (err) {
       setError(friendlyApiError(err))
@@ -182,6 +186,7 @@ export default function ReviewMode({ onSaveRecord }) {
     setRepoMeta(null)
     setFiles([])
     setScanResult(null)
+    setGate([])
     setAiCategory(null)
     setTrack(null)
     setStandards({ subject: '', gradeBand: '', codes: '' })
@@ -271,6 +276,21 @@ export default function ReviewMode({ onSaveRecord }) {
         <div className="rm-loaded">
           <div className="rm-repo-line">
             {repoMeta.source === 'local' ? '📁' : '📦'} {metaTitle(repoMeta)} ({repoMeta.branch}) · {shaWord(repoMeta)} <code>{repoMeta.commitSha.slice(0, 12)}</code> · 파일 {files.length}개
+          </div>
+          <div className="rm-gate">
+            <strong>제출 완결성 사전 게이트</strong>
+            <ul>
+              {gate.map((g) => (
+                <li key={g.id} className={g.ok ? 'gate-ok' : 'gate-warn'}>
+                  {g.ok ? (g.na ? '➖' : '✅') : '⚠️'} {g.label} — {g.detail}
+                </li>
+              ))}
+            </ul>
+            {gate.some((g) => !g.ok) && (
+              <p className="gate-note">
+                미비 항목이 있습니다 — 심사를 진행하기보다 제출자에게 보완을 요청(반려)하는 것을 권합니다.
+              </p>
+            )}
           </div>
           <div className="rm-scan-box">
             <strong>자동 규칙 스캔: {securityGrade(scanResult).score}점</strong>
