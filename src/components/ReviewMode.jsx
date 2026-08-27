@@ -3,6 +3,7 @@ import { parseGithubUrl, fetchRepoFiles } from '../lib/github.js'
 import { readLocalFolder } from '../lib/localFolder.js'
 import { checkSubmission } from '../lib/submissionGate.js'
 import { buildSupplementRequest } from '../lib/supplementRequest.js'
+import { buildCertification, isValidCertId, REGISTRY_REPO } from '../lib/certification.js'
 import { scanFiles } from '../lib/scanner.js'
 import { securityGrade } from '../lib/scoring.js'
 import { AI_MODELS, friendlyApiError } from '../lib/aiReview.js'
@@ -110,6 +111,17 @@ export default function ReviewMode({ onSaveRecord }) {
   const [reviewerName, setReviewerName] = useState('')
   const [suppCopied, setSuppCopied] = useState(false)
   const [verdictFilter, setVerdictFilter] = useState(null)
+  const [certId, setCertId] = useState('')
+  const [certCopied, setCertCopied] = useState(false)
+
+  const downloadFile = (name, content, type) => {
+    const blob = new Blob([content], { type })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = name
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
 
   const copySupplement = async (text) => {
     try {
@@ -580,6 +592,22 @@ export default function ReviewMode({ onSaveRecord }) {
 
       {step === 'report' && (() => {
         const supp = buildSupplementRequest({ repoMeta, track, judgments, overrides, humanInputs, gate })
+        const summary = computeSummary(track, judgments, overrides, humanInputs)
+        const issueCert = () => {
+          const cert = buildCertification({ certId, repoMeta, repoUrl, track, summary, reviewerName })
+          downloadFile(`${certId}.json`, JSON.stringify(cert.record, null, 2) + '\n', 'application/json')
+          downloadFile(`${certId}.svg`, cert.badgeSvg, 'image/svg+xml')
+        }
+        const copyCertSnippet = async () => {
+          const cert = buildCertification({ certId, repoMeta, repoUrl, track, summary, reviewerName })
+          try {
+            await navigator.clipboard.writeText(`HTML:\n${cert.snippetHtml}\n\n마크다운:\n${cert.snippetMd}\n\n검증 주소: ${cert.verifyUrl}`)
+            setCertCopied(true)
+            setTimeout(() => setCertCopied(false), 2500)
+          } catch {
+            alert('복사 권한이 없어요. 발급 파일의 안내를 이용해 주세요.')
+          }
+        }
         return (
           <div>
             <ReviewReport
@@ -610,6 +638,32 @@ export default function ReviewMode({ onSaveRecord }) {
                 <summary>📨 보완 요청서 미리보기 — 판단 미완료 {supp.count}건을 제작 교사 안내문으로 자동 정리</summary>
                 <pre>{supp.text}</pre>
               </details>
+            )}
+            {summary.status === 'pass_candidate' && (
+              <div className="cert-box">
+                <strong>🏅 인증 배지 발급</strong>
+                <p className="gh-hint">
+                  배지의 실체는 공개 인증 대장의 기록입니다. 인증번호를 정하고 발급 파일을 내려받아
+                  대장 저장소의 records/·badges/ 폴더에 커밋하면 발급이 완료됩니다. 심사 {shaWord(repoMeta)}과
+                  다른 코드에는 인증이 적용되지 않습니다.
+                </p>
+                <div className="cert-row">
+                  <input type="text" value={certId} onChange={(e) => setCertId(e.target.value.trim().toUpperCase())}
+                    placeholder="ES-2026-0001" aria-label="인증번호" />
+                  <button className="btn-primary" disabled={!isValidCertId(certId)} onClick={issueCert}>
+                    발급 파일 내려받기 (기록+배지)
+                  </button>
+                  <button className="btn-secondary" disabled={!isValidCertId(certId)} onClick={copyCertSnippet}>
+                    {certCopied ? '✅ 복사됨' : '삽입 코드 복사'}
+                  </button>
+                </div>
+                {certId && !isValidCertId(certId) && (
+                  <p className="gh-hint">인증번호 형식: ES-연도-일련번호 4자리 (예: ES-2026-0001)</p>
+                )}
+                <p className="gh-hint">
+                  인증 대장: <a href={REGISTRY_REPO} target="_blank" rel="noopener noreferrer">{REGISTRY_REPO}</a>
+                </p>
+              </div>
             )}
           </div>
         )
