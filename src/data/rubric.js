@@ -2,9 +2,11 @@
 // v1.1 (2026-08-27): plain(비전문가용 쉬운 설명) 추가 — 항목·판정 로직은 v1.0과 동일
 // v1.2 (2026-08-27): 팀원 제안(docs/제안-루브릭-v1.2.md, 실측 사고 기반) 중 우선순위 채택 —
 //   클라이언트 위조 2건·LLM 입력 고지(필수), 정답 비노출(점수), 학생 단위 삭제(수동)
+// v1.3 (2026-08-27): authority(법적 무게 등급) 추가 — 항목·판정 로직은 v1.2와 동일.
+//   팀 조사 카탈로그(docs/research/)의 등급 체계를 따름: 법률/고시·훈령/공식 권고/모범 사례
 // type: 'required'(하나라도 미충족이면 불합격 후보) | 'scored'(가중 점수)
 // aiVerifiable: true → AI가 코드에서 판정 초안 작성 / false → 심사자 수동 판정
-export const RUBRIC_VERSION = '1.2'
+export const RUBRIC_VERSION = '1.3'
 
 export const TRACKS = {
   admin: { label: '교무·행정 자동화', icon: '🗂️', desc: '성적·출결·명단·문서 처리 등 교사 업무용 도구 (학생이 사용자가 아님)' },
@@ -143,3 +145,23 @@ export const rubricItems = [
     plain: '앱을 관리하는 계정이 뚫리면 앱 전체가 뚫립니다. 비밀번호 외에 휴대폰 확인을 한 번 더 거치는 2단계 잠금이 켜져 있는지 봅니다.',
     evidenceHint: '심사 시 계정 설정 확인' },
 ]
+
+// 법적 무게 등급 — 보고서에서 "법적 의무"와 "권고"를 섞어 표현하지 않기 위한 구분
+export const AUTHORITY_LABELS = {
+  law: '법률',
+  notice: '고시·훈령',
+  guidance: '공식 권고',
+  practice: '모범 사례',
+}
+
+const AUTHORITY = {
+  'R-rrn': 'law', 'R-under14': 'law', 'R-admin-ext': 'law', 'R-admin-data': 'law', 'R-llm-input': 'law',
+  'S-minimal': 'law', 'S-consent': 'law', 'S-sensitive': 'law', 'S-overseas': 'law', 'S-ai-transparency': 'law',
+  'H-retention': 'law', 'H-delete': 'law',
+  'R-secrets': 'notice', 'R-db-locked': 'notice', 'R-impersonate': 'notice',
+  'S-access': 'notice', 'S-https': 'notice', 'H-2fa': 'notice',
+  'R-crisis': 'guidance', 'R-score-forge': 'guidance', 'S-xss': 'guidance', 'S-ai-fallibility': 'guidance',
+  'S-shared-device': 'guidance', 'S-answer-exposure': 'guidance', 'H-edu-fit': 'guidance', 'H-standards': 'guidance',
+  'S-quota': 'practice', 'S-write-guard': 'practice', 'S-notice': 'practice', 'H-usability': 'practice',
+}
+for (const it of rubricItems) it.authority = AUTHORITY[it.id]

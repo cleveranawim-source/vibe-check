@@ -523,6 +523,22 @@ const rules = [
   },
 ]
 
+// CWE 매핑 — 도구·언어 간 공통 약점 ID (팀 조사: 기계 판독 분류는 CWE로 연결)
+const CWE = {
+  'google-api-key': 'CWE-798', 'openai-key': 'CWE-798', 'anthropic-key': 'CWE-798', 'aws-key': 'CWE-798',
+  'github-token': 'CWE-798', 'telegram-token': 'CWE-798', 'supabase-service-role': 'CWE-798',
+  'jwt-hardcoded': 'CWE-798', 'webhook-url': 'CWE-798', 'hardcoded-password': 'CWE-798',
+  'vite-env-secret': 'CWE-798', 'private-key-block': 'CWE-321',
+  'eval-usage': 'CWE-95', 'new-function': 'CWE-95', 'settimeout-string': 'CWE-95',
+  'innerhtml-dynamic': 'CWE-79', 'document-write': 'CWE-79', 'javascript-url': 'CWE-79',
+  'firestore-open-write': 'CWE-284', 'firestore-open-read': 'CWE-284', 'client-side-gate': 'CWE-603',
+  'sql-concat': 'CWE-89', 'rrn-data': 'CWE-359', 'rrn-field': 'CWE-359', 'localstorage-personal': 'CWE-922',
+  'http-resource': 'CWE-319', 'target-blank': 'CWE-1022', 'cors-wildcard': 'CWE-942',
+  'postmessage-wildcard': 'CWE-346', 'console-sensitive': 'CWE-532',
+  'client-score-write': 'CWE-602', 'answer-in-client': 'CWE-540',
+}
+for (const r of rules) if (CWE[r.id]) r.cwe = CWE[r.id]
+
 export default rules
 
 // 프로젝트 단위 규칙: 한 줄 패턴이 아니라 파일 전체를 보고 "있어야 할 것이 없음"을 찾는다.

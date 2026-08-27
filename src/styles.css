@@ -1960,3 +1960,36 @@ button {
 @media print {
   .cert-box { display: none; }
 }
+
+/* 법적 무게 배지 + CWE 태그 (v1.3) */
+.auth-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 99px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.auth-law { background: var(--danger-soft); color: var(--danger); }
+.auth-notice { background: var(--warn-soft); color: var(--warn); }
+.auth-guidance { background: var(--info-soft); color: var(--info); }
+.auth-practice { background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+
+.cwe-tag {
+  margin-left: 6px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.72rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.rr-authority {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 2px;
+}

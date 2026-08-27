@@ -7,7 +7,7 @@ import { buildCertification, isValidCertId, REGISTRY_REPO } from '../lib/certifi
 import { scanFiles } from '../lib/scanner.js'
 import { securityGrade } from '../lib/scoring.js'
 import { AI_MODELS, friendlyApiError } from '../lib/aiReview.js'
-import { TRACKS, rubricItems, RUBRIC_VERSION } from '../data/rubric.js'
+import { TRACKS, rubricItems, RUBRIC_VERSION, AUTHORITY_LABELS } from '../data/rubric.js'
 import { inferCategory, judgeRubric, VERDICT_LABELS } from '../lib/reviewAi.js'
 import { computeSummary, finalVerdict } from '../lib/reviewSummary.js'
 import { SEVERITIES } from '../data/securityRules.js'
@@ -323,7 +323,8 @@ export default function ReviewMode({ onSaveRecord }) {
       <p className="panel-intro">
         교사 제작 앱의 점검·검수·평가 도구입니다. AI가 코드에서 증거를 수집해 루브릭 v{RUBRIC_VERSION} 판정
         초안을 만들고, <strong>최종 판정은 심사자가</strong> 합니다. AI 분석 단계에서 코드가 Anthropic 서버로
-        전송됩니다. 심사 대상 코드는 신뢰할 수 없는 입력으로 취급하세요 — 근거 인용을 반드시 직접 확인하세요.
+        전송됩니다 — 단, 데이터 파일(csv 등)은 전송에서 제외되고 탐지된 비밀키는 마스킹됩니다. 심사 대상
+        코드는 신뢰할 수 없는 입력으로 취급하세요 — 근거 인용을 반드시 직접 확인하세요.
       </p>
 
       <ol className="rm-stepper" aria-label="심사 진행 단계">
@@ -416,6 +417,7 @@ export default function ReviewMode({ onSaveRecord }) {
                         {SEVERITIES[f.rule.severity].label}
                       </span>{' '}
                       {f.rule.title} ({f.occurrences.length}곳)
+                      {f.rule.cwe && <code className="cwe-tag">{f.rule.cwe}</code>}
                     </li>
                   ))}
                 </ul>
@@ -523,6 +525,7 @@ export default function ReviewMode({ onSaveRecord }) {
               <div key={it.id} className={`rm-item rm-v-${ov?.verdict || j?.verdict}`}>
                 <div className="rm-item-head">
                   <span className={`rm-badge ${it.type}`}>{it.type === 'required' ? '필수' : `점수 ${it.weight}`}</span>
+                  <span className={`auth-badge auth-${it.authority}`}>{AUTHORITY_LABELS[it.authority]}</span>
                   <strong>{it.question}</strong>
                   <span className={`rm-verdict rm-${ov?.verdict || j?.verdict}`}>
                     {VERDICT_LABELS[ov?.verdict || j?.verdict]}{ov ? ' (번복)' : ''}
@@ -562,6 +565,7 @@ export default function ReviewMode({ onSaveRecord }) {
               <div key={it.id} className="rm-item rm-human">
                 <div className="rm-item-head">
                   <span className={`rm-badge ${it.type}`}>{it.type === 'required' ? '필수' : `점수 ${it.weight}`}</span>
+                  <span className={`auth-badge auth-${it.authority}`}>{AUTHORITY_LABELS[it.authority]}</span>
                   <strong>{it.question}</strong>
                 </div>
                 <p className="rm-plain">💡 {it.plain}</p>

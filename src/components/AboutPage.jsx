@@ -15,9 +15,14 @@ const LAWS = [
     url: 'https://www.law.go.kr/LSW//admRulInfoP.do?admRulSeq=2100000265956&chrClsCd=010201',
   },
   {
-    name: '아동·청소년 개인정보 보호 가이드라인',
-    note: '개인정보보호위원회(2022) — 연령 확인, 법정대리인 동의 절차',
-    url: 'https://www.korea.kr/briefing/policyBriefingView.do?newsId=148903862',
+    name: '아동·청소년 개인정보 보호 안내서',
+    note: '개인정보보호위원회(2024 개정) — 연령 확인, 법정대리인 동의 절차',
+    url: 'https://www.pipc.go.kr/np/cop/bbs/selectBoardArticle.do?bbsId=BS217&mCode=&nttId=10896',
+  },
+  {
+    name: '초·중등교육법 제29조의2 · 학습지원 SW 선정기준',
+    note: '학습지원 소프트웨어의 선정·심의를 법률이 요구 — 이 심사의 법적 토대 (교육부·개보위 선정기준 2025-12)',
+    url: 'https://www.moe.go.kr/boardCnts/viewRenew.do?boardID=294&boardSeq=105007&lev=0&m=020402',
   },
   {
     name: '교육부 「교육분야 인공지능 윤리원칙」(2022)',

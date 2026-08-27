@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { TRACKS, RUBRIC_VERSION, rubricItems } from '../data/rubric.js'
 import { MAX_AI_CHARS } from './aiReview.js'
+import { redactForAi } from './redact.js'
 
 export const VERDICT_LABELS = {
   pass: '충족',
@@ -128,15 +129,19 @@ const CATEGORY_SYSTEM = `당신은 교사가 바이브 코딩으로 만든 프�
 JSON만 출력: {"category":"...","confidence":0.0~1.0,"evidence":["코드에서 찾은 근거 (최대 3개)"],"reasoning":"한 문장"}`
 
 export async function inferCategory({ apiKey, model, files, onText }) {
-  const { text, excluded } = buildCodeSection(files)
+  const { files: safeFiles, excludedData } = redactForAi(files)
+  const { text, excluded } = buildCodeSection(safeFiles)
+  const dataNote = excludedData.length > 0
+    ? `\n\n[데이터 파일 — 개인정보 보호를 위해 내용 미전송, 존재만 고지]\n${excludedData.map((p) => `- ${p}`).join('\n')}`
+    : ''
   const raw = await callJson({
     apiKey,
     model,
     system: CATEGORY_SYSTEM,
-    user: `다음 프로그램을 분류하세요.\n${text}`,
+    user: `다음 프로그램을 분류하세요.\n${text}${dataNote}`,
     onText,
   })
-  return { ...validateCategory(raw), excludedFiles: excluded }
+  return { ...validateCategory(raw), excludedFiles: [...excludedData.map((p) => `${p} (데이터 파일 — 전송 제외)`), ...excluded] }
 }
 
 const JUDGE_SYSTEM = `당신은 교사 제작 교육용 프로그램의 공적 심사를 위한 코드 검증관입니다.
@@ -153,7 +158,11 @@ const JUDGE_SYSTEM = `당신은 교사 제작 교육용 프로그램의 공적 �
 
 export async function judgeRubric({ apiKey, model, files, track, scanSummary, onText }) {
   const items = rubricItems.filter((it) => it.tracks.includes(track) && it.aiVerifiable)
-  const { text, excluded } = buildCodeSection(files)
+  const { files: safeFiles, excludedData } = redactForAi(files)
+  const { text, excluded } = buildCodeSection(safeFiles)
+  const dataNote = excludedData.length > 0
+    ? `\n\n[데이터 파일 — 개인정보 보호를 위해 내용 미전송, 존재만 고지. 명단·성적 파일 여부는 규칙 검사 결과와 파일명으로 판정]\n${excludedData.map((p) => `- ${p}`).join('\n')}`
+    : ''
   const itemsJson = JSON.stringify(
     items.map((it) => ({ itemId: it.id, question: it.question, hint: it.evidenceHint })),
     null,
@@ -163,8 +172,8 @@ export async function judgeRubric({ apiKey, model, files, track, scanSummary, on
     apiKey,
     model,
     system: JUDGE_SYSTEM,
-    user: `[심사 항목 — ${TRACKS[track].label} 트랙]\n${itemsJson}\n\n[자동 규칙 검사 결과 — 참고용]\n${scanSummary || '없음'}\n\n[코드]${text}`,
+    user: `[심사 항목 — ${TRACKS[track].label} 트랙]\n${itemsJson}\n\n[자동 규칙 검사 결과 — 참고용]\n${scanSummary || '없음'}${dataNote}\n\n[코드]${text}`,
     onText,
   })
-  return { judgments: validateJudgments(raw, items), items, excluded }
+  return { judgments: validateJudgments(raw, items), items, excluded: [...excludedData.map((p) => `${p} (데이터 파일 — 전송 제외)`), ...excluded] }
 }

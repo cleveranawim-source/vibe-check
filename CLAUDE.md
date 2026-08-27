@@ -31,7 +31,7 @@ localStorage(`edusafe-api-key`/`edusafe-model`)에 고정 저장, "저장된 키
 **키를 코드·저장소에 하드코딩하는 것은 절대 금지** — 공개 배포 앱이라 즉시 유출이며
 자체 루브릭 R-secrets 위반.
 
-- `src/data/rubric.js` — 루브릭 v1.2 (버전 관리 필수. 트랙 4종: admin/subject_tool/learning_content/class_ops, 필수 10+점수 15+수동 6)
+- `src/data/rubric.js` — 루브릭 v1.3 (트랙 4종, 필수 10+점수 15+수동 6, authority 법적 무게 등급)
 - `src/data/securityRules.js` — 규칙 스캔 40여 종 + projectRules(프로젝트 단위: App Check 부재 등)
 - `src/lib/reviewAi.js` — AI 호출·검증. **신뢰성 원칙이 코드로 강제됨**: 근거 인용 없는 pass/fail은 validateJudgments가 needs_human으로 강등, 누락 항목도 needs_human으로 채움
 - `src/lib/reviewSummary.js` — 판정 집계 (오버라이드>AI>수동, 판단불가 남으면 무조건 '보류')
@@ -48,7 +48,7 @@ localStorage(`edusafe-api-key`/`edusafe-model`)에 고정 저장, "저장된 키
 
 ```bash
 npm run dev      # localhost:5173
-npm test         # vitest 52개 — 수정 후 반드시 실행
+npm test         # vitest 60개 — 수정 후 반드시 실행
 npm run build && npm run deploy   # gh-pages 배포 (커밋·푸시도 함께 할 것)
 ```
 

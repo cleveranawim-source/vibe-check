@@ -1,4 +1,4 @@
-import { TRACKS, RUBRIC_VERSION } from '../data/rubric.js'
+import { TRACKS, RUBRIC_VERSION, AUTHORITY_LABELS } from '../data/rubric.js'
 import { VERDICT_LABELS } from '../lib/reviewAi.js'
 import { computeSummary, finalVerdict, STATUS_LABELS } from '../lib/reviewSummary.js'
 
@@ -80,7 +80,10 @@ export default function ReviewReport({
             const hi = humanInputs[it.id]
             return (
               <tr key={it.id} className={v === 'fail' ? 'rr-row-fail' : ''}>
-                <td>{it.type === 'required' ? '필수' : `점수(${it.weight})`}</td>
+                <td>
+                  {it.type === 'required' ? '필수' : `점수(${it.weight})`}
+                  <div className="rr-authority">{AUTHORITY_LABELS[it.authority]}</div>
+                </td>
                 <td>
                   {it.question}
                   <div className="rr-plain">{it.plain}</div>
@@ -112,7 +115,8 @@ export default function ReviewReport({
               .slice(0, 10)
               .map((f) => (
                 <li key={f.rule.id}>
-                  <strong>{f.rule.title}</strong> ({f.occurrences.length}곳) — {f.rule.fix}
+                  <strong>{f.rule.title}</strong> ({f.occurrences.length}곳)
+                  {f.rule.cwe && <code className="cwe-tag">{f.rule.cwe}</code>} — {f.rule.fix}
                 </li>
               ))}
           </ul>
