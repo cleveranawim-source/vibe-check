@@ -71,11 +71,26 @@ export function validateJudgments(raw, items) {
 
 // ───── 코드 섹션 조립 (150k자 상한, 잘린 파일은 명시) ─────
 
+// AI 전송 우선순위: 보안 규칙·설정 → 일반 소스 → 번들·압축·잠금파일(후순위).
+// 같은 상한으로 판정 가치가 높은 파일부터 채운다 — 알파벳순 절단의 임의성 제거.
+const RULES_PATH = /\.rules$|\.sql$|(^|\/)(firebase|vercel|netlify)\.json$/i
+const BUNDLE_PATH = /(^|\/)(dist|build)\/|\.min\.|(^|\/)package-lock\.json$/i
+const looksMinifiedText = (text) => text.length / (text.split('\n').length || 1) > 300
+
+export function aiOrder(files) {
+  const rank = (f) =>
+    RULES_PATH.test(f.path) ? 0 : BUNDLE_PATH.test(f.path) || looksMinifiedText(f.text) ? 2 : 1
+  return [...files].sort((a, b) => rank(a) - rank(b) || a.path.localeCompare(b.path))
+}
+
 export function buildCodeSection(files) {
   let text = ''
   const included = []
   const excluded = []
+  let includedChars = 0
+  let totalChars = 0
   for (const f of files) {
+    totalChars += f.text.length
     const chunk = `\n\n===== 파일: ${f.path} =====\n${f.text}`
     if (text.length + chunk.length > MAX_AI_CHARS) {
       excluded.push(f.path)
@@ -83,8 +98,10 @@ export function buildCodeSection(files) {
     }
     text += chunk
     included.push(f.path)
+    includedChars += f.text.length
   }
-  return { text, included, excluded }
+  const coverage = totalChars === 0 ? 100 : Math.round((includedChars / totalChars) * 100)
+  return { text, included, excluded, coverage }
 }
 
 // ───── AI 호출 ─────
@@ -130,7 +147,7 @@ JSON만 출력: {"category":"...","confidence":0.0~1.0,"evidence":["코드에서
 
 export async function inferCategory({ apiKey, model, files, onText }) {
   const { files: safeFiles, excludedData } = redactForAi(files)
-  const { text, excluded } = buildCodeSection(safeFiles)
+  const { text, excluded } = buildCodeSection(aiOrder(safeFiles))
   const dataNote = excludedData.length > 0
     ? `\n\n[데이터 파일 — 개인정보 보호를 위해 내용 미전송, 존재만 고지]\n${excludedData.map((p) => `- ${p}`).join('\n')}`
     : ''
@@ -159,7 +176,7 @@ const JUDGE_SYSTEM = `당신은 교사 제작 교육용 프로그램의 공적 �
 export async function judgeRubric({ apiKey, model, files, track, scanSummary, onText }) {
   const items = rubricItems.filter((it) => it.tracks.includes(track) && it.aiVerifiable)
   const { files: safeFiles, excludedData } = redactForAi(files)
-  const { text, excluded } = buildCodeSection(safeFiles)
+  const { text, excluded, coverage } = buildCodeSection(aiOrder(safeFiles))
   const dataNote = excludedData.length > 0
     ? `\n\n[데이터 파일 — 개인정보 보호를 위해 내용 미전송, 존재만 고지. 명단·성적 파일 여부는 규칙 검사 결과와 파일명으로 판정]\n${excludedData.map((p) => `- ${p}`).join('\n')}`
     : ''
@@ -175,5 +192,10 @@ export async function judgeRubric({ apiKey, model, files, track, scanSummary, on
     user: `[심사 항목 — ${TRACKS[track].label} 트랙]\n${itemsJson}\n\n[자동 규칙 검사 결과 — 참고용]\n${scanSummary || '없음'}${dataNote}\n\n[코드]${text}`,
     onText,
   })
-  return { judgments: validateJudgments(raw, items), items, excluded: [...excludedData.map((p) => `${p} (데이터 파일 — 전송 제외)`), ...excluded] }
+  return {
+    judgments: validateJudgments(raw, items),
+    items,
+    excluded: [...excludedData.map((p) => `${p} (데이터 파일 — 전송 제외)`), ...excluded],
+    coverage,
+  }
 }

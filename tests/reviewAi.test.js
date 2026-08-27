@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractJson, validateCategory, validateJudgments, buildCodeSection } from '../src/lib/reviewAi.js'
+import { extractJson, validateCategory, validateJudgments, buildCodeSection, aiOrder } from '../src/lib/reviewAi.js'
 import { MAX_AI_CHARS } from '../src/lib/aiReview.js'
 import { rubricItems } from '../src/data/rubric.js'
 
@@ -25,6 +25,44 @@ describe('buildCodeSection', () => {
     const { included, excluded } = buildCodeSection([small, big])
     expect(included).toContain('small.js')
     expect(excluded).toContain('big.js')
+  })
+})
+
+describe('aiOrder — AI 전송 우선순위', () => {
+  it('보안 규칙 파일이 먼저, 번들·잠금파일은 마지막', () => {
+    const files = [
+      { path: 'dist/index.min.js', text: 'x'.repeat(400) },
+      { path: 'src/app.js', text: 'const a = 1\nconst b = 2' },
+      { path: 'firestore.rules', text: 'allow read: if false' },
+      { path: 'package-lock.json', text: '{}' },
+    ]
+    const ordered = aiOrder(files).map((f) => f.path)
+    expect(ordered[0]).toBe('firestore.rules')
+    expect(ordered[1]).toBe('src/app.js')
+    expect(ordered.slice(2).sort()).toEqual(['dist/index.min.js', 'package-lock.json'])
+  })
+
+  it('압축(minified) 형태의 텍스트는 경로와 무관하게 후순위', () => {
+    const files = [
+      { path: 'a-bundle.js', text: 'x'.repeat(5000) },
+      { path: 'z-source.js', text: 'let a = 1\nlet b = 2\nlet c = 3' },
+    ]
+    expect(aiOrder(files)[0].path).toBe('z-source.js')
+  })
+})
+
+describe('buildCodeSection — 커버리지', () => {
+  it('제외 없이 다 들어가면 100%', () => {
+    const { coverage } = buildCodeSection([{ path: 'a.js', text: 'abc' }])
+    expect(coverage).toBe(100)
+  })
+
+  it('제외가 생기면 검토 비율을 보고한다', () => {
+    const small = { path: 'a.js', text: 'x'.repeat(1000) }
+    const big = { path: 'b.js', text: 'y'.repeat(200000) }
+    const { coverage, excluded } = buildCodeSection([small, big])
+    expect(excluded).toContain('b.js')
+    expect(coverage).toBeLessThan(5)
   })
 })
 

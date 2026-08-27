@@ -38,7 +38,7 @@
 ```bash
 npm install
 npm run dev      # localhost:5173
-npm test         # vitest 60개 (루브릭·규칙·AI 검증·집계·게이트·보완 요청서·마스킹·인증)
+npm test         # vitest 64개 (루브릭·규칙·AI 검증·집계·게이트·마스킹·우선순위·인증)
 npm run build && npm run deploy   # gh-pages 배포
 ```
 

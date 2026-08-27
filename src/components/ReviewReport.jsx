@@ -20,6 +20,7 @@ export default function ReviewReport({
   humanInputs,
   opinion,
   reviewerName,
+  aiScope = null, // { coverage, excluded } — AI 분석 범위 (제외 파일이 있을 때 보고서에 자동 고지)
 }) {
   const summary = computeSummary(track, judgments, overrides, humanInputs)
   const isLocal = repoMeta.source === 'local'
@@ -134,6 +135,17 @@ export default function ReviewReport({
         <div>심사자: {reviewerName || '____________'} (서명) ____________</div>
         <div>심사일: {new Date().toLocaleDateString('ko-KR')}</div>
       </div>
+
+      {aiScope?.excluded?.length > 0 && (
+        <div className="rr-scope">
+          <h4>AI 분석 범위 고지</h4>
+          <p>
+            AI 판정은 전송 대상 코드의 {aiScope.coverage ?? '?'}%를 검토한 결과입니다. 다음 파일은
+            분석에서 제외되었습니다: {aiScope.excluded.join(', ')}. 규칙 스캔은 수집된 전체 파일에
+            대해 수행되었습니다.
+          </p>
+        </div>
+      )}
 
       <p className="report-disclaimer">
         본 보고서는 {isLocal ? '콘텐츠 지문' : '커밋'} {repoMeta.commitSha.slice(0, 12) || '(미상)'}에 대한 심사

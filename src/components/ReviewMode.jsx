@@ -105,6 +105,7 @@ export default function ReviewMode({ onSaveRecord }) {
   const [standards, setStandards] = useState({ subject: '', gradeBand: '', codes: '' })
   const [judgments, setJudgments] = useState({})
   const [excludedFiles, setExcludedFiles] = useState([])
+  const [aiCoverage, setAiCoverage] = useState(null)
   const [overrides, setOverrides] = useState({})
   const [humanInputs, setHumanInputs] = useState({})
   const [opinion, setOpinion] = useState('')
@@ -215,7 +216,7 @@ export default function ReviewMode({ onSaveRecord }) {
     let received = 0
     try {
       setBusy('AI가 루브릭 판정 초안을 작성하는 중… (1~3분)')
-      const { judgments: j, excluded } = await judgeRubric({
+      const { judgments: j, excluded, coverage } = await judgeRubric({
         apiKey: apiKey.trim(),
         model,
         files,
@@ -228,6 +229,7 @@ export default function ReviewMode({ onSaveRecord }) {
       })
       setJudgments(j)
       setExcludedFiles(excluded)
+      setAiCoverage(coverage)
       setStep('judged')
     } catch (err) {
       setError(friendlyApiError(err))
@@ -281,6 +283,7 @@ export default function ReviewMode({ onSaveRecord }) {
     setStandards({ subject: '', gradeBand: '', codes: '' })
     setJudgments({})
     setExcludedFiles([])
+    setAiCoverage(null)
     setOverrides({})
     setHumanInputs({})
     setOpinion('')
@@ -497,7 +500,13 @@ export default function ReviewMode({ onSaveRecord }) {
       {step === 'judged' && (
         <div className="rm-judged">
           {excludedFiles.length > 0 && (
-            <div className="ai-notice"><p>⚠️ 용량 초과로 분석에서 제외된 파일: {excludedFiles.join(', ')} — 판정의 한계로 보고서에 감안하세요.</p></div>
+            <div className="ai-notice">
+              <p>
+                ⚠️ AI가 전송 대상 코드의 {aiCoverage ?? '?'}%를 검토했습니다. 제외된 파일:{' '}
+                {excludedFiles.join(', ')} — 핵심 소스가 포함되어 있다면 해당 파일은 직접 확인하세요.
+                (번들·압축 파일은 후순위로 밀리므로 대개 무해합니다)
+              </p>
+            </div>
           )}
           <div className="rm-chips" role="group" aria-label="판정 요약·필터">
             {CHIP_DEFS.map(([v, label]) => (
@@ -626,6 +635,7 @@ export default function ReviewMode({ onSaveRecord }) {
               humanInputs={humanInputs}
               opinion={opinion}
               reviewerName={reviewerName}
+              aiScope={{ coverage: aiCoverage, excluded: excludedFiles }}
             />
             <div className="report-actions">
               <button className="btn-primary" onClick={() => window.print()}>🖨️ 인쇄 / PDF 저장</button>

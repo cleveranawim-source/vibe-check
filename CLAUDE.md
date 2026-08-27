@@ -48,7 +48,7 @@ localStorage(`edusafe-api-key`/`edusafe-model`)에 고정 저장, "저장된 키
 
 ```bash
 npm run dev      # localhost:5173
-npm test         # vitest 60개 — 수정 후 반드시 실행
+npm test         # vitest 64개 — 수정 후 반드시 실행
 npm run build && npm run deploy   # gh-pages 배포 (커밋·푸시도 함께 할 것)
 ```
 
