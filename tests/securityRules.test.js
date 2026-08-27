@@ -50,4 +50,14 @@ describe('v1.2 연동 규칙 패턴', () => {
     expect(ids).toContain('client-score-write')
     expect(ids).toContain('external-ai-endpoint')
   })
+
+  it('긴 한 줄로 압축해도 치명 규칙을 건너뛰지 않는다', () => {
+    const files = [{
+      path: 'app.js',
+      name: 'app.js',
+      text: `${'/* padding */'.repeat(40)} allow write: if true;`,
+    }]
+    const findings = scanFiles(files).findings
+    expect(findings.some((finding) => finding.rule.severity === 'critical')).toBe(true)
+  })
 })

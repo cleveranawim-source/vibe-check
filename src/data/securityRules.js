@@ -2,6 +2,8 @@
 // severity: critical(심각) | warning(경고) | info(확인 필요)
 // scanMinified: true인 규칙은 압축(번들) 파일에서도 검사한다 — 비밀키는 번들 속에도 숨어 있기 때문.
 
+export const SECURITY_RULESET_VERSION = '1.0.0'
+
 export const CATEGORIES = {
   secret: { label: '비밀키·민감정보 노출', icon: '🔑' },
   xss: { label: '위험한 코드 실행 (XSS 등)', icon: '💉' },

@@ -3,7 +3,6 @@ import { parseGithubUrl, fetchRepoFiles } from '../lib/github.js'
 import { readLocalFolder } from '../lib/localFolder.js'
 import { checkSubmission } from '../lib/submissionGate.js'
 import { buildSupplementRequest } from '../lib/supplementRequest.js'
-import { buildCertification, isValidCertId, REGISTRY_REPO } from '../lib/certification.js'
 import { scanFiles } from '../lib/scanner.js'
 import { securityGrade } from '../lib/scoring.js'
 import { AI_MODELS, friendlyApiError } from '../lib/aiReview.js'
@@ -12,9 +11,16 @@ import { inferCategory, judgeRubric, VERDICT_LABELS } from '../lib/reviewAi.js'
 import { computeSummary, finalVerdict } from '../lib/reviewSummary.js'
 import { SEVERITIES } from '../data/securityRules.js'
 import ReviewReport from './ReviewReport.jsx'
+import BlockchainBadge from './BlockchainBadge.jsx'
+import {
+  BADGE_DEMO_TRIGGER,
+  SILVER_BADGE_DEMO_TRIGGER,
+  createBadgeDemoRepository,
+  isBadgeDemoTrigger,
+} from '../lib/badgeDemo.js'
 
 const metaTitle = (m) => (m.owner ? `${m.owner}/${m.repo}` : m.repo)
-const shaWord = (m) => (m.source === 'local' ? '지문' : '커밋')
+const shaWord = (m) => (m.demoOnly ? '데모 ID' : m.source === 'local' ? '지문' : '커밋')
 
 // 심사자 API 키·모델은 이 브라우저(localStorage)에만 저장 — 코드·저장소에 넣으면 R-secrets 위반
 const KEY_STORAGE = 'edusafe-api-key'
@@ -112,18 +118,6 @@ export default function ReviewMode({ onSaveRecord }) {
   const [reviewerName, setReviewerName] = useState('')
   const [suppCopied, setSuppCopied] = useState(false)
   const [verdictFilter, setVerdictFilter] = useState(null)
-  const [certId, setCertId] = useState('')
-  const [certCopied, setCertCopied] = useState(false)
-
-  const downloadFile = (name, content, type) => {
-    const blob = new Blob([content], { type })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = name
-    a.click()
-    URL.revokeObjectURL(a.href)
-  }
-
   const copySupplement = async (text) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -144,6 +138,23 @@ export default function ReviewMode({ onSaveRecord }) {
 
   // ① 저장소 로드 + 규칙 스캔 — API 키 없이 가능 (선별·사전 확인 단계)
   const loadRepo = async () => {
+    if (isBadgeDemoTrigger(repoUrl)) {
+      const demo = createBadgeDemoRepository(repoUrl)
+      const demoFiles = [...demo.files]
+      setError('')
+      setRepoMeta(demo.repoMeta)
+      setFiles(demoFiles)
+      setScanResult(scanFiles(demoFiles))
+      setGate(checkSubmission(demoFiles, {
+        source: 'demo',
+        skippedCount: demo.skippedCount,
+        truncated: demo.truncated,
+      }).map((item) => item.id === 'pinned'
+        ? { ...item, label: '데모 데이터', detail: '화면 시연용 고정 fixture — 실제 제출물 아님' }
+        : item))
+      setStep('loaded')
+      return
+    }
     const parsed = parseGithubUrl(repoUrl)
     if (!parsed) return setError('주소 형식을 알 수 없어요. 예: https://github.com/아이디/저장소')
     setError('')
@@ -151,7 +162,17 @@ export default function ReviewMode({ onSaveRecord }) {
       setBusy('저장소 불러오는 중…')
       const result = await fetchRepoFiles({ ...parsed, onProgress: (d, t) => setBusy(`파일 내려받는 중… ${d}/${t}`) })
       if (result.files.length === 0) throw new Error('검사할 수 있는 파일이 없어요.')
-      setRepoMeta({ source: 'github', owner: parsed.owner, repo: parsed.repo, branch: result.branch, commitSha: result.commitSha })
+      setRepoMeta({
+        source: 'github',
+        owner: result.owner,
+        repo: result.repo,
+        branch: result.branch,
+        commitSha: result.commitSha,
+        repositoryId: result.repositoryId,
+        canonicalUrl: result.canonicalUrl,
+        sourceCoverageComplete: result.coverageComplete,
+        hasApplicationSource: result.hasApplicationSource,
+      })
       setFiles(result.files)
       setScanResult(scanFiles(result.files))
       setGate(checkSubmission(result.files, { source: 'github', skippedCount: result.skippedCount, truncated: result.truncated }))
@@ -356,6 +377,14 @@ export default function ReviewMode({ onSaveRecord }) {
         </div>
       )}
 
+      {(repoMeta?.source === 'github' || repoMeta?.demoOnly) && scanResult && (
+        <BlockchainBadge
+          repoUrl={repoUrl}
+          repoMeta={repoMeta}
+          scanGrade={securityGrade(scanResult)}
+        />
+      )}
+
       {step === 'setup' && (
         <div className="rm-setup">
           <div className="rm-methods">
@@ -369,6 +398,10 @@ export default function ReviewMode({ onSaveRecord }) {
               <button className="btn-primary" onClick={loadRepo} disabled={!!busy || !repoUrl.trim()}>
                 불러오기 + 규칙 스캔
               </button>
+              <p className="method-note">
+                빠른 시연: <code>{BADGE_DEMO_TRIGGER}</code>은 100점·Gold,
+                {' '}<code>{SILVER_BADGE_DEMO_TRIGGER}</code>은 80점·Silver 마크를 보여줍니다.
+              </p>
             </div>
             <div className="method-card">
               <div className="method-icon">📁</div>
@@ -411,7 +444,11 @@ export default function ReviewMode({ onSaveRecord }) {
             <div className="rm-scan-main">
               <strong>자동 규칙 스캔</strong>
               {scanResult.findings.length === 0 ? (
-                <p className="rm-reasoning">등록된 패턴에서 발견된 문제 없음</p>
+                <p className="rm-reasoning">
+                  {repoMeta.demoOnly
+                    ? '시연용 fixture에서 고정된 100점 예시 결과'
+                    : '등록된 패턴에서 발견된 문제 없음'}
+                </p>
               ) : (
                 <ul className="rm-scan-list">
                   {scanResult.findings.map((f) => (
@@ -427,26 +464,36 @@ export default function ReviewMode({ onSaveRecord }) {
               )}
             </div>
           </div>
-          <label className="ai-label">심사자 Anthropic API 키
-            <input type="password" value={apiKey} onChange={(e) => updateApiKey(e.target.value)}
-              placeholder="sk-ant-..." autoComplete="off" disabled={!!busy} />
-          </label>
-          <p className="gh-hint">
-            키는 이 브라우저에만 저장되어 다음 심사에 자동으로 채워집니다 (코드·서버에는 저장되지 않음).
-            {apiKey && (
-              <button type="button" className="key-clear" onClick={() => updateApiKey('')} disabled={!!busy}>
-                저장된 키 지우기
+          {repoMeta.demoOnly ? (
+            <p className="badge-config-note">
+              데모는 {securityGrade(scanResult).score}점과
+              {' '}{repoMeta.demoLevel === 'gold' ? 'Gold' : 'Silver'} 인증마크의 표시만 체험합니다.
+              AI 분석·실제 인증 발급은 실행하지 않습니다.
+            </p>
+          ) : (
+            <>
+              <label className="ai-label">심사자 Anthropic API 키
+                <input type="password" value={apiKey} onChange={(e) => updateApiKey(e.target.value)}
+                  placeholder="sk-ant-..." autoComplete="off" disabled={!!busy} />
+              </label>
+              <p className="gh-hint">
+                키는 이 브라우저에만 저장되어 다음 심사에 자동으로 채워집니다 (코드·서버에는 저장되지 않음).
+                {apiKey && (
+                  <button type="button" className="key-clear" onClick={() => updateApiKey('')} disabled={!!busy}>
+                    저장된 키 지우기
+                  </button>
+                )}
+              </p>
+              <label className="ai-label">모델
+                <select value={model} onChange={(e) => updateModel(e.target.value)} disabled={!!busy}>
+                  {AI_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
+                </select>
+              </label>
+              <button className="btn-primary" onClick={classify} disabled={!!busy || !apiKey.trim()}>
+                ② AI 분류 추론
               </button>
-            )}
-          </p>
-          <label className="ai-label">모델
-            <select value={model} onChange={(e) => updateModel(e.target.value)} disabled={!!busy}>
-              {AI_MODELS.map((m) => (<option key={m.id} value={m.id}>{m.label}</option>))}
-            </select>
-          </label>
-          <button className="btn-primary" onClick={classify} disabled={!!busy || !apiKey.trim()}>
-            ② AI 분류 추론
-          </button>
+            </>
+          )}
         </div>
       )}
 
@@ -605,22 +652,6 @@ export default function ReviewMode({ onSaveRecord }) {
 
       {step === 'report' && (() => {
         const supp = buildSupplementRequest({ repoMeta, track, judgments, overrides, humanInputs, gate })
-        const summary = computeSummary(track, judgments, overrides, humanInputs)
-        const issueCert = () => {
-          const cert = buildCertification({ certId, repoMeta, repoUrl, track, summary, reviewerName })
-          downloadFile(`${certId}.json`, JSON.stringify(cert.record, null, 2) + '\n', 'application/json')
-          downloadFile(`${certId}.svg`, cert.badgeSvg, 'image/svg+xml')
-        }
-        const copyCertSnippet = async () => {
-          const cert = buildCertification({ certId, repoMeta, repoUrl, track, summary, reviewerName })
-          try {
-            await navigator.clipboard.writeText(`HTML:\n${cert.snippetHtml}\n\n마크다운:\n${cert.snippetMd}\n\n검증 주소: ${cert.verifyUrl}`)
-            setCertCopied(true)
-            setTimeout(() => setCertCopied(false), 2500)
-          } catch {
-            alert('복사 권한이 없어요. 발급 파일의 안내를 이용해 주세요.')
-          }
-        }
         return (
           <div>
             <ReviewReport
@@ -652,32 +683,6 @@ export default function ReviewMode({ onSaveRecord }) {
                 <summary>📨 보완 요청서 미리보기 — 판단 미완료 {supp.count}건을 제작 교사 안내문으로 자동 정리</summary>
                 <pre>{supp.text}</pre>
               </details>
-            )}
-            {summary.status === 'pass_candidate' && (
-              <div className="cert-box">
-                <strong>🏅 인증 배지 발급</strong>
-                <p className="gh-hint">
-                  배지의 실체는 공개 인증 대장의 기록입니다. 인증번호를 정하고 발급 파일을 내려받아
-                  대장 저장소의 records/·badges/ 폴더에 커밋하면 발급이 완료됩니다. 심사 {shaWord(repoMeta)}과
-                  다른 코드에는 인증이 적용되지 않습니다.
-                </p>
-                <div className="cert-row">
-                  <input type="text" value={certId} onChange={(e) => setCertId(e.target.value.trim().toUpperCase())}
-                    placeholder="ES-2026-0001" aria-label="인증번호" />
-                  <button className="btn-primary" disabled={!isValidCertId(certId)} onClick={issueCert}>
-                    발급 파일 내려받기 (기록+배지)
-                  </button>
-                  <button className="btn-secondary" disabled={!isValidCertId(certId)} onClick={copyCertSnippet}>
-                    {certCopied ? '✅ 복사됨' : '삽입 코드 복사'}
-                  </button>
-                </div>
-                {certId && !isValidCertId(certId) && (
-                  <p className="gh-hint">인증번호 형식: ES-연도-일련번호 4자리 (예: ES-2026-0001)</p>
-                )}
-                <p className="gh-hint">
-                  인증 대장: <a href={REGISTRY_REPO} target="_blank" rel="noopener noreferrer">{REGISTRY_REPO}</a>
-                </p>
-              </div>
             )}
           </div>
         )
