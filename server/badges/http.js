@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 
 import { asBadgeError, BadgeError } from './errors.js'
-import { makeBlockchainBadgeSvg } from './svg.js'
+import { BADGE_SVG_VARIANTS, makeBlockchainBadgeSvg } from './svg.js'
 
 const MAX_BODY_BYTES = 64 * 1024
 
@@ -55,6 +55,14 @@ async function readJson(request) {
   }
 }
 
+function badgeVariant(searchParams) {
+  const variant = searchParams.get('variant') || 'compact'
+  if (!BADGE_SVG_VARIANTS.includes(variant)) {
+    throw new BadgeError(422, 'invalid_badge_variant', '지원하지 않는 인증마크 디자인입니다.')
+  }
+  return variant
+}
+
 export async function handleBadgeHttp(request, { service, config }) {
   let corsOrigin = null
   try {
@@ -84,9 +92,11 @@ export async function handleBadgeHttp(request, { service, config }) {
     }
     if (request.method === 'GET') {
       const uid = url.searchParams.get('uid') || ''
+      const format = url.searchParams.get('format')
+      const variant = format === 'svg' ? badgeVariant(url.searchParams) : 'compact'
       const result = await service.verify(uid)
-      if (url.searchParams.get('format') === 'svg') {
-        return new Response(makeBlockchainBadgeSvg(result), {
+      if (format === 'svg') {
+        return new Response(makeBlockchainBadgeSvg(result, { variant }), {
           status: 200,
           headers: {
             'Content-Type': 'image/svg+xml; charset=utf-8',

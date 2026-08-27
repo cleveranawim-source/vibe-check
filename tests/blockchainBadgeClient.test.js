@@ -27,4 +27,24 @@ describe('blockchain badge client', () => {
     expect(links.verifyUrl).toBe(`https://edusafe.example/api/badges?uid=${UID}`)
     expect(links.badgeUrl).toBe(`https://edusafe.example/api/badges?uid=${UID}&format=svg`)
   })
+
+  it('기본값과 compact는 기존 주소를 유지하고 showcase만 variant를 추가한다', () => {
+    const options = { apiUrl: '/api/badges', baseUrl: 'https://edusafe.example/report' }
+    const defaults = buildBadgeLinks(UID, options)
+    const compact = buildBadgeLinks(UID, { ...options, variant: 'compact' })
+    const showcase = buildBadgeLinks(UID, { ...options, variant: 'showcase' })
+
+    expect(compact).toEqual(defaults)
+    expect(defaults.badgeUrl).not.toContain('variant=')
+    expect(showcase.verifyUrl).toBe(defaults.verifyUrl)
+    expect(showcase.badgeUrl).toBe(`${defaults.badgeUrl}&variant=showcase`)
+  })
+
+  it('허용하지 않은 배지 variant는 URL에 반영하지 않고 거절한다', () => {
+    expect(() => buildBadgeLinks(UID, {
+      apiUrl: '/api/badges',
+      baseUrl: 'https://edusafe.example/report',
+      variant: 'wide',
+    })).toThrow(TypeError)
+  })
 })

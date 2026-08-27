@@ -58,7 +58,10 @@ describe('badge previews', () => {
     }))
 
     expect(html).toContain(`${score}점`)
-    expect(html).toContain(level)
+    expect(html).toContain(`EduSafe ${level}`)
+    expect(html).toContain('showcase-badge')
+    expect(html).toContain('width="360"')
+    expect(html).toContain('height="112"')
     expect(html).toContain('DEMO')
     expect(html).toContain('실제 인증 아님')
     expect(html).not.toContain('<form')

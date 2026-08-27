@@ -22,6 +22,45 @@ export default function BlockchainBadge({
   return <SignedBlockchainBadge repoUrl={repoUrl} repoMeta={repoMeta} scanGrade={scanGrade} />
 }
 
+function DemoShowcaseBadge({ level, score, commitSha }) {
+  const isGold = level === 'Gold'
+  const palette = isGold
+    ? { accent: '#8a6410', surface: '#fff4c2', foreground: '#5d4308' }
+    : { accent: '#46515d', surface: '#edf1f5', foreground: '#27313c' }
+
+  return (
+    <svg
+      className={`showcase-badge ${level.toLowerCase()}`}
+      xmlns="http://www.w3.org/2000/svg"
+      width="360"
+      height="112"
+      viewBox="0 0 360 112"
+      role="img"
+      aria-labelledby="demo-showcase-title demo-showcase-description"
+    >
+      <title id="demo-showcase-title">{`EduSafe ${level} ${score}점 데모 인증마크`}</title>
+      <desc id="demo-showcase-description">실제 서명이나 인증이 아닌 showcase 디자인 미리보기입니다.</desc>
+      <defs>
+        <clipPath id="demo-showcase-clip"><rect width="360" height="112" rx="16" /></clipPath>
+      </defs>
+      <g clipPath="url(#demo-showcase-clip)">
+        <rect width="360" height="112" fill={palette.surface} />
+        <rect width="104" height="112" fill={palette.accent} />
+      </g>
+      <rect x="0.75" y="0.75" width="358.5" height="110.5" rx="15.25" fill="none" stroke={palette.accent} strokeWidth="1.5" />
+      <path d="M52 25 73 34v16c0 16-9 27-21 34-12-7-21-18-21-34V34z" fill="#fff" fillOpacity="0.12" stroke="#fff" strokeWidth="3" strokeLinejoin="round" />
+      <path d="m41 52 8 8 15-17" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <text x="52" y="101" textAnchor="middle" fontFamily="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" fontSize="9.5" fontWeight="700" fill="#fff">PREVIEW</text>
+      <text x="124" y="25" fontFamily="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" fontSize="11" fontWeight="700" fill={palette.accent}>EDUSAFE</text>
+      <text x="124" y="57" fontFamily="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" fontSize="28" fontWeight="800" fill={palette.accent}>{level.toUpperCase()}</text>
+      <text x="124" y="79" fontFamily="-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif" fontSize="13" fontWeight="700" fill={palette.foreground}>자동 보안 점검 · {score}점</text>
+      <text x="124" y="99" fontFamily="ui-monospace,SFMono-Regular,Menlo,monospace" fontSize="10.5" fontWeight="600" fill={palette.foreground}>OFFCHAIN PREVIEW · {commitSha}</text>
+      <rect x="270" y="13" width="72" height="22" rx="11" fill={palette.accent} />
+      <text x="306" y="28" textAnchor="middle" fontFamily="-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif" fontSize="10" fontWeight="800" fill="#fff">DEMO</text>
+    </svg>
+  )
+}
+
 function DemoBlockchainBadge({ repoMeta, scanGrade }) {
   const score = scanGrade?.score
   const level = score >= BADGE_POLICY.levels.gold.minimumScore
@@ -37,8 +76,6 @@ function DemoBlockchainBadge({ repoMeta, scanGrade }) {
     )
   }
 
-  const levelClass = level.toLowerCase()
-
   return (
     <section className="cert-box blockchain-cert eligible" aria-label="블록체인 인증마크 데모">
       <div className="blockchain-cert-head">
@@ -48,7 +85,7 @@ function DemoBlockchainBadge({ repoMeta, scanGrade }) {
             <code>{repoMeta.repo}</code> 전용 로컬 미리보기입니다. 서버 재검사·지갑 서명·DB 저장은 실행하지 않습니다.
           </p>
         </div>
-        <span className="badge-eligibility pass">DEMO · 실제 인증 아님</span>
+        <span className="badge-eligibility pass demo-label">DEMO · 실제 인증 아님</span>
       </div>
 
       <div className="badge-score-row">
@@ -56,13 +93,10 @@ function DemoBlockchainBadge({ repoMeta, scanGrade }) {
         <span>미리보기 등급 <strong>{level}</strong></span>
       </div>
 
-      <div className="blockchain-issued demo-issued" role="status">
-        <div className={`demo-badge-art ${levelClass}`} role="img" aria-label={`EduSafe ${level} ${score}점 데모 마크`}>
-          <span>EduSafe {level}</span>
-          <span>{score}점 · DEMO</span>
-        </div>
+      <div className="blockchain-issued showcase-issued demo-issued" role="status">
+        <DemoShowcaseBadge level={level} score={score} commitSha={repoMeta.commitSha} />
         <div>
-          <strong>{level} 인증마크 미리보기</strong>
+          <strong>{level} 대형 인증마크 미리보기</strong>
           <code>{repoMeta.commitSha} · 실제 EAS UID 없음</code>
           <p className="gh-hint">
             실제 인증 아님 · 발급 API, 서명, DB 기록, 공개 검증 링크를 만들지 않습니다.
@@ -198,10 +232,25 @@ function SignedBlockchainBadge({
       )}
 
       {result?.uid && result.status === 'issued' && (() => {
-        const links = buildBadgeLinks(result.uid)
+        const links = buildBadgeLinks(result.uid, { variant: 'showcase' })
         return (
-          <div className="blockchain-issued" role="status">
-            <img src={links.badgeUrl} alt={`EduSafe ${result.badgeLevel} EAS 오프체인 인증마크`} height="24" />
+          <div className="blockchain-issued showcase-issued" role="status">
+            <a
+              className="showcase-badge-link"
+              href={links.verifyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`EduSafe ${result.badgeLevel} ${result.score}점 인증 상세 및 서명 검증 보기`}
+            >
+              <img
+                className="showcase-badge"
+                src={links.badgeUrl}
+                alt={`EduSafe ${result.badgeLevel} 자동 보안 점검 인증마크, ${result.score}점`}
+                width="360"
+                height="112"
+                decoding="async"
+              />
+            </a>
             <div>
               <strong>EAS 오프체인 서명 발급 완료 · 가스비 0원</strong>
               <code>{result.uid}</code>

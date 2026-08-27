@@ -1,5 +1,6 @@
 export const BLOCKCHAIN_BADGE_ENABLED = import.meta.env.VITE_BLOCKCHAIN_BADGES_ENABLED === 'true'
 export const BLOCKCHAIN_BADGE_API_URL = import.meta.env.VITE_BLOCKCHAIN_BADGE_API_URL || '/api/badges'
+export const BLOCKCHAIN_BADGE_VARIANTS = Object.freeze(['compact', 'showcase'])
 
 export class BlockchainBadgeApiError extends Error {
   constructor(code, message, status, details) {
@@ -37,11 +38,15 @@ export async function issueBlockchainBadge({ payload, issuanceToken, fetchImpl =
   return body
 }
 
-export function buildBadgeLinks(uid, { apiUrl = BLOCKCHAIN_BADGE_API_URL, baseUrl } = {}) {
+export function buildBadgeLinks(uid, { apiUrl = BLOCKCHAIN_BADGE_API_URL, baseUrl, variant = 'compact' } = {}) {
+  if (!BLOCKCHAIN_BADGE_VARIANTS.includes(variant)) {
+    throw new TypeError('지원하지 않는 인증마크 디자인입니다.')
+  }
   const fallbackBase = baseUrl || (typeof window === 'undefined' ? 'http://localhost' : window.location.href)
   const verify = new URL(apiUrl, fallbackBase)
   verify.searchParams.set('uid', uid)
   const badge = new URL(verify)
   badge.searchParams.set('format', 'svg')
+  if (variant !== 'compact') badge.searchParams.set('variant', variant)
   return { verifyUrl: verify.toString(), badgeUrl: badge.toString() }
 }
