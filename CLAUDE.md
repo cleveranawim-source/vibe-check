@@ -39,6 +39,8 @@ localStorage(`edusafe-api-key`/`edusafe-model`)에 고정 저장, "저장된 키
 - `src/lib/submissionGate.js` — 제출 완결성 사전 게이트 (Firebase 규칙·Supabase RLS 내보내기 안내 포함)
 - `src/lib/supplementRequest.js` — 판단불가 → 보완 요청서 자동 생성 (보고서 화면에서 복사)
 - `src/lib/ledger.js` — 재심사 회차 연결 (같은 앱 재심사 시 round·prevSha 기록)
+- `src/lib/certification.js` — 인증 배지 발급 (대장 기록 JSON+SVG+삽입 코드). 실체는 공개
+  인증 대장 `cleveranawim-source/edusafe-registry` (인증 1건=커밋 1건, Pages 검증 페이지)
 - `src/components/ReviewMode.jsx`(흐름) / `ReviewReport.jsx`(보고서) / `ReviewLedger.jsx`(심사 대장, localStorage `vibecheck-ledger-v1`)
 - App.jsx: ReviewMode는 탭 전환 시 언마운트하지 않는다(진행 중 심사 유실 방지)
 
